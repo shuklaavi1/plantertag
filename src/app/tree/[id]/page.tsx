@@ -157,8 +157,8 @@ export default function TreePage({ params }: PageProps) {
 
             {/* GPS Coordinates */}
             {tree.latitude && tree.longitude && (
-              <div className="pt-2">
-                <div className="flex justify-between items-center mb-2">
+              <div className="pt-2 space-y-3">
+                <div className="flex justify-between items-center">
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     <MapPin className="h-4 w-4 text-accent" /> GPS Coordinates
                   </span>
@@ -166,6 +166,21 @@ export default function TreePage({ params }: PageProps) {
                     {Number(tree.latitude).toFixed(5)}, {Number(tree.longitude).toFixed(5)}
                   </span>
                 </div>
+
+                {/* Embedded Interactive Satellite Map */}
+                <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border bg-muted shadow-sm">
+                  <iframe
+                    title="Tree Location Map"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    allowFullScreen
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://maps.google.com/maps?q=${tree.latitude},${tree.longitude}&t=k&z=17&output=embed`}
+                  />
+                </div>
+
                 <a 
                   href={`https://www.google.com/maps/search/?api=1&query=${tree.latitude},${tree.longitude}`} 
                   target="_blank" 
