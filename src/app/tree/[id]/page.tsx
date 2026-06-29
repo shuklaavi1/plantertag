@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, isMockMode } from '@/lib/supabase';
+import { getMockTrees, getMockLogs } from '@/lib/mockData';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonVariants } from '@/components/ui/button';
@@ -32,14 +33,39 @@ export default async function TreePage({ params }: PageProps) {
     return notFound();
   }
 
-  // Fetch tree details from live Supabase
-  const { data: tree, error: treeError } = await supabase
-    .from('trees')
-    .select('*')
-    .eq('id', treeId)
-    .single();
+  let tree: any = null;
+  let logs: any[] = [];
 
-  if (treeError || !tree) {
+  if (isMockMode) {
+    const allTrees = getMockTrees();
+    tree = allTrees.find(t => t.id === treeId) || null;
+    if (tree) {
+      const allLogs = getMockLogs();
+      logs = allLogs
+        .filter(l => l.tree_id === treeId)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+  } else {
+    const { data, error } = await supabase
+      .from('trees')
+      .select('*')
+      .eq('id', treeId)
+      .single();
+    
+    tree = data;
+
+    if (tree) {
+      const { data: rawLogs } = await supabase
+        .from('tree_logs')
+        .select('*')
+        .eq('tree_id', treeId)
+        .order('created_at', { ascending: false });
+      
+      logs = rawLogs || [];
+    }
+  }
+
+  if (!tree) {
     return (
       <div className="min-h-screen bg-background flex flex-col justify-center items-center px-4 text-center">
         <Card className="w-full max-w-sm border-border p-6 shadow-md bg-card">
@@ -60,14 +86,7 @@ export default async function TreePage({ params }: PageProps) {
     );
   }
 
-  // Fetch logs for this tree from live Supabase (newest first)
-  const { data: rawLogs, error: logsError } = await supabase
-    .from('tree_logs')
-    .select('*')
-    .eq('tree_id', treeId)
-    .order('created_at', { ascending: false });
 
-  const logs = rawLogs || [];
 
   const visitLogs = logs?.filter(log => log.type === 'visit') || [];
   const visitCount = visitLogs.length;

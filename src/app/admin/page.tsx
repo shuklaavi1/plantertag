@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, isMockMode } from '@/lib/supabase';
+import { getMockTrees, getMockLogs, getMockSession, signInMock, signOutMock } from '@/lib/mockData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -86,48 +87,62 @@ export default function AdminPage() {
   const [sortField, setSortField] = useState<'id' | 'species' | 'planter_name' | 'planted_date' | 'total_visits' | 'days_overdue'>('id');
   const [sortAsc, setSortAsc] = useState(true);
 
-  // Fetch all data from live Supabase
+  // Fetch all data
   const fetchData = async () => {
     try {
-      const { data: treesData, error: treesErr } = await supabase
-        .from('trees')
-        .select('*')
-        .order('id', { ascending: true });
+      if (isMockMode) {
+        setTrees(getMockTrees());
+        setLogs(getMockLogs());
+      } else {
+        const { data: treesData, error: treesErr } = await supabase
+          .from('trees')
+          .select('*')
+          .order('id', { ascending: true });
 
-      if (treesErr) throw treesErr;
+        if (treesErr) throw treesErr;
 
-      const { data: logsData, error: logsErr } = await supabase
-        .from('tree_logs')
-        .select('*');
+        const { data: logsData, error: logsErr } = await supabase
+          .from('tree_logs')
+          .select('*');
 
-      if (logsErr) throw logsErr;
+        if (logsErr) throw logsErr;
 
-      setTrees(treesData || []);
-      setLogs(logsData || []);
+        setTrees(treesData || []);
+        setLogs(logsData || []);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch registry data.');
     }
   };
 
   useEffect(() => {
-    // Check session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
+    if (isMockMode) {
+      const session = getMockSession();
+      setUser(session);
+      if (session) {
         fetchData();
       }
       setLoading(false);
-    });
+    } else {
+      // Check session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchData();
+        }
+        setLoading(false);
+      });
 
-    // Listen reactively to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchData();
-      }
-    });
+      // Listen reactively to auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchData();
+        }
+      });
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    }
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -135,23 +150,39 @@ export default function AdminPage() {
     setActionLoading('login');
     setError(null);
 
-    const { data, error: loginErr } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
-
-    if (loginErr) {
-      setError(loginErr.message || 'Invalid credentials.');
+    if (isMockMode) {
+      if (loginEmail === DEMO_EMAIL && loginPassword === DEMO_PASSWORD) {
+        signInMock();
+        setUser({ email: DEMO_EMAIL, name: 'Demo Staff' });
+        fetchData();
+      } else {
+        setError('Invalid credentials.');
+      }
+      setActionLoading(null);
     } else {
-      setUser(data.user);
-      fetchData();
+      const { data, error: loginErr } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+
+      if (loginErr) {
+        setError(loginErr.message || 'Invalid credentials.');
+      } else {
+        setUser(data.user);
+        fetchData();
+      }
+      setActionLoading(null);
     }
-    setActionLoading(null);
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    if (isMockMode) {
+      signOutMock();
+      setUser(null);
+    } else {
+      await supabase.auth.signOut();
+      setUser(null);
+    }
     router.push('/login');
   };
 

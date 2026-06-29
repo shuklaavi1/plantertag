@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, isMockMode } from '@/lib/supabase';
+import { getMockTrees, getMockSession, signInMock } from '@/lib/mockData';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,40 +48,53 @@ export default function QrCodesPage() {
   const [loginEmail, setLoginEmail] = useState(DEMO_EMAIL);
   const [loginPassword, setLoginPassword] = useState(DEMO_PASSWORD);
 
-  // Fetch trees list from Supabase
+  // Fetch trees list
   const fetchTrees = async () => {
     try {
-      const { data, error: err } = await supabase
-        .from('trees')
-        .select('*')
-        .order('id', { ascending: true });
+      if (isMockMode) {
+        setTrees(getMockTrees());
+      } else {
+        const { data, error: err } = await supabase
+          .from('trees')
+          .select('*')
+          .order('id', { ascending: true });
 
-      if (err) throw err;
-      setTrees(data || []);
+        if (err) throw err;
+        setTrees(data || []);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch trees for QR sheet.');
     }
   };
 
   useEffect(() => {
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
+    if (isMockMode) {
+      const session = getMockSession();
+      setUser(session);
+      if (session) {
         fetchTrees();
       }
       setLoading(false);
-    });
+    } else {
+      // Check initial session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchTrees();
+        }
+        setLoading(false);
+      });
 
-    // Listen reactively to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchTrees();
-      }
-    });
+      // Listen reactively to auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchTrees();
+        }
+      });
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    }
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -88,18 +102,29 @@ export default function QrCodesPage() {
     setActionLoading('login');
     setError(null);
 
-    const { data, error: loginErr } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
-
-    if (loginErr) {
-      setError(loginErr.message || 'Invalid credentials.');
+    if (isMockMode) {
+      if (loginEmail === DEMO_EMAIL && loginPassword === DEMO_PASSWORD) {
+        signInMock();
+        setUser({ email: DEMO_EMAIL, name: 'Demo Staff' });
+        fetchTrees();
+      } else {
+        setError('Invalid credentials.');
+      }
+      setActionLoading(null);
     } else {
-      setUser(data.user);
-      fetchTrees();
+      const { data, error: loginErr } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+
+      if (loginErr) {
+        setError(loginErr.message || 'Invalid credentials.');
+      } else {
+        setUser(data.user);
+        fetchTrees();
+      }
+      setActionLoading(null);
     }
-    setActionLoading(null);
   };
 
   const handlePrint = () => {

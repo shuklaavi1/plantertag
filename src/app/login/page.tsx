@@ -3,7 +3,8 @@
 import { useState, Suspense } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, isMockMode } from '@/lib/supabase';
+import { signInMock } from '@/lib/mockData';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,17 +31,28 @@ function LoginForm() {
     setLoading(true);
     setError(null);
 
-    const { data, error: loginErr } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (loginErr) {
-      setError(loginErr.message || 'Invalid email or password.');
-      setLoading(false);
+    if (isMockMode) {
+      if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
+        signInMock();
+        router.push(redirectTo);
+        router.refresh();
+      } else {
+        setError('Invalid email or password.');
+        setLoading(false);
+      }
     } else {
-      router.push(redirectTo);
-      router.refresh();
+      const { data, error: loginErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (loginErr) {
+        setError(loginErr.message || 'Invalid email or password.');
+        setLoading(false);
+      } else {
+        router.push(redirectTo);
+        router.refresh();
+      }
     }
   };
 

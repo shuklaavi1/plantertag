@@ -4,7 +4,8 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, isMockMode } from '@/lib/supabase';
+import { getMockTrees, addMockLog, updateMockTreeStatus, getMockSession, signInMock } from '@/lib/mockData';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,40 +64,57 @@ export default function UpdateTreePage({ params }: PageProps) {
       return;
     }
 
-    // 1. Fetch tree details to prefill status
     const fetchTree = async () => {
-      const { data, error } = await supabase
-        .from('trees')
-        .select('*')
-        .eq('id', treeId)
-        .single();
-      
-      if (error || !data) {
-        setError('Tree not found in registry');
+      if (isMockMode) {
+        const allTrees = getMockTrees();
+        const data = allTrees.find(t => t.id === treeId) || null;
+        if (!data) {
+          setError('Tree not found in registry');
+        } else {
+          setTree(data);
+          setStatus(data.status || 'Healthy');
+        }
       } else {
-        setTree(data);
-        setStatus(data.status || 'Healthy');
+        const { data, error } = await supabase
+          .from('trees')
+          .select('*')
+          .eq('id', treeId)
+          .single();
+        
+        if (error || !data) {
+          setError('Tree not found in registry');
+        } else {
+          setTree(data);
+          setStatus(data.status || 'Healthy');
+        }
       }
     };
 
-    // 2. Fetch session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
+    if (isMockMode) {
+      const session = getMockSession();
+      setUser(session);
+      if (session) {
         fetchTree();
       }
       setLoading(false);
-    });
+    } else {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchTree();
+        }
+        setLoading(false);
+      });
 
-    // 3. Listen to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchTree();
-      }
-    });
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchTree();
+        }
+      });
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    }
   }, [treeId]);
 
   // Handle Inline Login
@@ -105,19 +123,31 @@ export default function UpdateTreePage({ params }: PageProps) {
     setActionLoading('login');
     setError(null);
 
-    const { data, error: loginErr } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
-
-    if (loginErr) {
-      setError(loginErr.message || 'Invalid email or password.');
+    if (isMockMode) {
+      if (loginEmail === DEMO_EMAIL && loginPassword === DEMO_PASSWORD) {
+        signInMock();
+        setUser({ email: DEMO_EMAIL, name: 'Demo Staff' });
+        setSuccess('Logged in successfully!');
+        setTimeout(() => setSuccess(null), 1200);
+      } else {
+        setError('Invalid email or password.');
+      }
+      setActionLoading(null);
     } else {
-      setUser(data.user);
-      setSuccess('Logged in successfully!');
-      setTimeout(() => setSuccess(null), 1200);
+      const { data, error: loginErr } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+
+      if (loginErr) {
+        setError(loginErr.message || 'Invalid email or password.');
+      } else {
+        setUser(data.user);
+        setSuccess('Logged in successfully!');
+        setTimeout(() => setSuccess(null), 1200);
+      }
+      setActionLoading(null);
     }
-    setActionLoading(null);
   };
 
   // Helper function to query device GPS location
@@ -156,25 +186,35 @@ export default function UpdateTreePage({ params }: PageProps) {
     setSuccess(null);
 
     try {
-      // a) Insert the watering log
-      const { error: logErr } = await supabase
-        .from('tree_logs')
-        .insert({
+      if (isMockMode) {
+        addMockLog({
           tree_id: tree.id,
           type: 'visit',
-          note: note.trim() || null,
+          note: note.trim() || undefined,
           staff_name: user.email,
         });
+        updateMockTreeStatus(tree.id, status);
+      } else {
+        // a) Insert the watering log
+        const { error: logErr } = await supabase
+          .from('tree_logs')
+          .insert({
+            tree_id: tree.id,
+            type: 'visit',
+            note: note.trim() || null,
+            staff_name: user.email,
+          });
 
-      if (logErr) throw logErr;
+        if (logErr) throw logErr;
 
-      // b) Update tree survival status
-      const { error: statusErr } = await supabase
-        .from('trees')
-        .update({ status })
-        .eq('id', tree.id);
+        // b) Update tree survival status
+        const { error: statusErr } = await supabase
+          .from('trees')
+          .update({ status })
+          .eq('id', tree.id);
 
-      if (statusErr) throw statusErr;
+        if (statusErr) throw statusErr;
+      }
 
       setSuccess('Watering & tending visit logged successfully!');
       setNote('');
@@ -243,48 +283,68 @@ export default function UpdateTreePage({ params }: PageProps) {
 
       if (!blob) throw new Error('Image compression failed');
 
-      // Step C: Upload the compressed JPEG to Supabase Storage bucket 'tree-photos'
-      const fileExt = 'jpg';
-      const fileName = `tree-${tree.id}-${Date.now()}.${fileExt}`;
-      
-      setGpsStatus('Uploading growth photo...');
-      const { data: uploadData, error: uploadErr } = await supabase.storage
-        .from('tree-photos')
-        .upload(fileName, blob, {
-          contentType: 'image/jpeg',
-          cacheControl: '3600',
-          upsert: true
+      if (isMockMode) {
+        // Convert image blob to base64 Data URL so it fits in mock localStorage
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
         });
 
-      if (uploadErr) throw uploadErr;
-
-      // Get public photo URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('tree-photos')
-        .getPublicUrl(fileName);
-
-      // Step D: Insert the log with coordinates into database
-      const { error: logErr } = await supabase
-        .from('tree_logs')
-        .insert({
+        addMockLog({
           tree_id: tree.id,
           type: 'photo',
-          photo_url: publicUrl,
-          note: note.trim() || null,
-          log_latitude: coords.latitude,
-          log_longitude: coords.longitude,
+          photo_url: dataUrl,
+          note: note.trim() || undefined,
+          log_latitude: coords.latitude || undefined,
+          log_longitude: coords.longitude || undefined,
           staff_name: user.email,
         });
+        updateMockTreeStatus(tree.id, status);
+      } else {
+        // Step C: Upload the compressed JPEG to Supabase Storage bucket 'tree-photos'
+        const fileExt = 'jpg';
+        const fileName = `tree-${tree.id}-${Date.now()}.${fileExt}`;
+        
+        setGpsStatus('Uploading growth photo...');
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from('tree-photos')
+          .upload(fileName, blob, {
+            contentType: 'image/jpeg',
+            cacheControl: '3600',
+            upsert: true
+          });
 
-      if (logErr) throw logErr;
+        if (uploadErr) throw uploadErr;
 
-      // Step E: Update tree status
-      const { error: statusErr } = await supabase
-        .from('trees')
-        .update({ status })
-        .eq('id', tree.id);
+        // Get public photo URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('tree-photos')
+          .getPublicUrl(fileName);
 
-      if (statusErr) throw statusErr;
+        // Step D: Insert the log with coordinates into database
+        const { error: logErr } = await supabase
+          .from('tree_logs')
+          .insert({
+            tree_id: tree.id,
+            type: 'photo',
+            photo_url: publicUrl,
+            note: note.trim() || null,
+            log_latitude: coords.latitude,
+            log_longitude: coords.longitude,
+            staff_name: user.email,
+          });
+
+        if (logErr) throw logErr;
+
+        // Step E: Update tree status
+        const { error: statusErr } = await supabase
+          .from('trees')
+          .update({ status })
+          .eq('id', tree.id);
+
+        if (statusErr) throw statusErr;
+      }
 
       setSuccess('Growth photo and status updated successfully!');
       setSelectedFile(null);

@@ -6,7 +6,7 @@ export interface Tree {
   main_photo_url: string;
   latitude: number;
   longitude: number;
-  location: string;
+  status: string;
 }
 
 export interface TreeLog {
@@ -15,288 +15,193 @@ export interface TreeLog {
   type: 'photo' | 'visit';
   photo_url?: string;
   note?: string;
+  log_latitude?: number;
+  log_longitude?: number;
   staff_name: string;
   created_at: string;
 }
 
-const DEFAULT_TREES: Tree[] = [
+const INDIAN_SPECIES = [
+  'Sal (Shorea robusta)',
+  'Teak (Tectona grandis)',
+  'Mahua (Madhuca longifolia)',
+  'Arjun (Terminalia arjuna)',
+  'Bamboo (Dendrocalamus strictus)',
+  'Neem (Azadirachta indica)',
+  'Jamun (Syzygium cumini)',
+  'Bel (Aegle marmelos)',
+  'Karanj (Millettia pinnata)',
+  'Semal (Bombax ceiba)'
+];
+
+const JHARKHAND_PLANTERS = [
+  'Birsa Oraon', 'Karmi Munda', 'Sukhram Ho', 'Phulo Soren', 'Lakhiram Tudu',
+  'Ramesh Oraon', 'Sita Devi', 'Sunil Munda', 'Gita Kisku', 'Anil Hembrom',
+  'Rajesh Oraon', 'Meena Munda', 'Suman Ho', 'Sanjay Soren', 'Asha Tudu',
+  'Vijay Oraon', 'Puja Devi', 'Santosh Munda', 'Sunita Kisku', 'Amit Hembrom',
+  'Kiran Oraon', 'Sanjay Munda', 'Jyoti Ho', 'Rakesh Soren', 'Priyanka Tudu',
+  'Suresh Oraon', 'Kavita Devi', 'Manoj Munda', 'Babita Kisku', 'Deepak Hembrom',
+  'Lalita Oraon', 'Vikram Munda', 'Rupa Ho', 'Ajay Soren', 'Nisha Tudu',
+  'Manish Oraon', 'Soni Devi', 'Rajendra Munda', 'Poonam Kisku', 'Vinod Hembrom',
+  'Aarti Oraon', 'Dinesh Munda', 'Reena Ho', 'Subhash Soren', 'Sapna Tudu',
+  'Alok Oraon', 'Kusum Devi', 'Pankaj Munda', 'Champa Kisku', 'Sanjay Hembrom'
+];
+
+export const STATIC_TREES: Tree[] = Array.from({ length: 50 }, (_, i) => {
+  const id = i + 1;
+  const species = INDIAN_SPECIES[i % INDIAN_SPECIES.length];
+  const planter_name = JHARKHAND_PLANTERS[i % JHARKHAND_PLANTERS.length];
+  
+  // Set default status values matching seed script
+  let status = 'Healthy';
+  if (id === 8 || id === 22 || id === 38) {
+    status = 'Needs Attention';
+  } else if (id === 16) {
+    status = 'Dead';
+  }
+
+  // Set default planted_date spread across recent months
+  let planted_date = '2026-06-25';
+  if (id % 10 === 0) planted_date = '2026-03-20';
+  else if (id % 10 === 3) planted_date = '2026-04-05';
+  else if (id % 10 === 6) planted_date = '2026-04-15';
+  else if (id % 10 === 8) planted_date = '2026-05-18';
+  else if (id % 10 === 1) planted_date = '2026-05-01';
+
+  // Set default photo url
+  let main_photo_url = '/demo/tree_mature.png';
+  if (id % 3 === 0) main_photo_url = '/demo/tree_growing.png';
+  else if (id % 3 === 2) main_photo_url = '/demo/tree_sapling.png';
+
+  return {
+    id,
+    planter_name,
+    species,
+    planted_date,
+    main_photo_url,
+    latitude: 23.85412 + (i * 0.003),
+    longitude: 84.12345 + (i * 0.003),
+    status
+  };
+});
+
+export const STATIC_LOGS: TreeLog[] = [
+  // Tree 1 Logs
   {
-    id: 1,
-    planter_name: "Birsa Oraon",
-    species: "Sal (Shorea robusta)",
-    planted_date: "2026-06-25",
-    main_photo_url: "/demo/tree_mature.png",
-    latitude: 23.854120,
-    longitude: 84.123450,
-    location: "Kasturba School, PTR"
+    id: 'log-1-v1',
+    tree_id: 1,
+    type: 'visit',
+    note: 'Initial base fertilization complete.',
+    staff_name: 'Ramesh Kerketta',
+    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
   },
   {
-    id: 2,
-    planter_name: "Karmi Munda",
-    species: "Mahua (Madhuca longifolia)",
-    planted_date: "2026-06-25",
-    main_photo_url: "/demo/tree_mature.png",
-    latitude: 23.861250,
-    longitude: 84.135600,
-    location: "Kasturba School, PTR"
+    id: 'log-1-p1',
+    tree_id: 1,
+    type: 'photo',
+    photo_url: '/demo/tree_sapling.png',
+    note: 'Planting day snapshot.',
+    staff_name: 'Sunita Tigga',
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
   },
   {
-    id: 3,
-    planter_name: "Sukhram Ho",
-    species: "Arjun (Terminalia arjuna)",
-    planted_date: "2026-06-25",
-    main_photo_url: "/demo/tree_growing.png",
-    latitude: 23.842340,
-    longitude: 84.112340,
-    location: "Kasturba School, PTR"
+    id: 'log-1-v2',
+    tree_id: 1,
+    type: 'visit',
+    note: 'Watered in the evening, soil moisture verified.',
+    staff_name: 'Ajay Lakra',
+    created_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
   },
   {
-    id: 4,
-    planter_name: "Phulo Soren",
-    species: "Neem (Azadirachta indica)",
-    planted_date: "2026-06-25",
-    main_photo_url: "/demo/tree_sapling.png",
-    latitude: 23.871120,
-    longitude: 84.148760,
-    location: "Kasturba School, PTR"
+    id: 'log-1-v3',
+    tree_id: 1,
+    type: 'visit',
+    note: 'Checked trunk health. Clear.',
+    staff_name: 'Poonam Minz',
+    created_at: new Date().toISOString()
+  },
+  // Tree 2 Logs
+  {
+    id: 'log-2-v1',
+    tree_id: 2,
+    type: 'visit',
+    note: 'Soil aerated and watered.',
+    staff_name: 'Sunita Tigga',
+    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
   },
   {
-    id: 5,
-    planter_name: "Lakhiram Tudu",
-    species: "Teak (Tectona grandis)",
-    planted_date: "2026-06-25",
-    main_photo_url: "/demo/tree_growing.png",
-    latitude: 23.859000,
-    longitude: 84.129900,
-    location: "Kasturba School, PTR"
+    id: 'log-2-p1',
+    tree_id: 2,
+    type: 'photo',
+    photo_url: '/demo/tree_growing.png',
+    note: 'Initial health checkup photo.',
+    staff_name: 'Ajay Lakra',
+    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'log-2-v2',
+    tree_id: 2,
+    type: 'visit',
+    note: 'Evening checking. Watering complete.',
+    staff_name: 'Deepak Toppo',
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
   }
 ];
 
-const DEFAULT_LOGS: TreeLog[] = [
-  // Tree 1: 3 visits, 2 photos
-  {
-    id: "log-1-v1",
-    tree_id: 1,
-    type: "visit",
-    note: "Initial base fertilization complete.",
-    staff_name: "Ramesh Kerketta",
-    created_at: "2026-06-25T08:00:00.000Z"
-  },
-  {
-    id: "log-1-p1",
-    tree_id: 1,
-    type: "photo",
-    photo_url: "/demo/tree_sapling.png",
-    note: "Planting day snapshot.",
-    staff_name: "Sunita Tigga",
-    created_at: "2026-06-25T09:15:00.000Z"
-  },
-  {
-    id: "log-1-v2",
-    tree_id: 1,
-    type: "visit",
-    note: "Watered in the evening, soil moisture verified.",
-    staff_name: "Ajay Lakra",
-    created_at: "2026-06-25T16:30:00.000Z"
-  },
-  {
-    id: "log-1-v3",
-    tree_id: 1,
-    type: "visit",
-    note: "Checked trunk health. Clear.",
-    staff_name: "Poonam Minz",
-    created_at: "2026-06-26T08:45:00.000Z"
-  },
-  {
-    id: "log-1-p2",
-    tree_id: 1,
-    type: "photo",
-    photo_url: "/demo/tree_tended.png",
-    note: "Weeded around tree guard.",
-    staff_name: "Deepak Toppo",
-    created_at: "2026-06-26T14:20:00.000Z"
-  },
-
-  // Tree 2: 2 visits, 1 photo
-  {
-    id: "log-2-v1",
-    tree_id: 2,
-    type: "visit",
-    note: "Soil aerated and watered.",
-    staff_name: "Sunita Tigga",
-    created_at: "2026-06-25T08:15:00.000Z"
-  },
-  {
-    id: "log-2-p1",
-    tree_id: 2,
-    type: "photo",
-    photo_url: "/demo/tree_growing.png",
-    note: "Initial health checkup photo.",
-    staff_name: "Ajay Lakra",
-    created_at: "2026-06-25T10:00:00.000Z"
-  },
-  {
-    id: "log-2-v2",
-    tree_id: 2,
-    type: "visit",
-    note: "Evening checking. Watering complete.",
-    staff_name: "Deepak Toppo",
-    created_at: "2026-06-25T17:00:00.000Z"
-  },
-
-  // Tree 3: 4 visits, 2 photos
-  {
-    id: "log-3-v1",
-    tree_id: 3,
-    type: "visit",
-    note: "Planting support post set up.",
-    staff_name: "Ramesh Kerketta",
-    created_at: "2026-06-25T07:45:00.000Z"
-  },
-  {
-    id: "log-3-p1",
-    tree_id: 3,
-    type: "photo",
-    photo_url: "/demo/tree_sapling.png",
-    note: "Planted sapling profile.",
-    staff_name: "Poonam Minz",
-    created_at: "2026-06-25T09:00:00.000Z"
-  },
-  {
-    id: "log-3-v2",
-    tree_id: 3,
-    type: "visit",
-    note: "Root watered thoroughly.",
-    staff_name: "Ajay Lakra",
-    created_at: "2026-06-25T16:15:00.000Z"
-  },
-  {
-    id: "log-3-v3",
-    tree_id: 3,
-    type: "visit",
-    note: "Pest barrier applied.",
-    staff_name: "Sunita Tigga",
-    created_at: "2026-06-26T09:10:00.000Z"
-  },
-  {
-    id: "log-3-p2",
-    tree_id: 3,
-    type: "photo",
-    photo_url: "/demo/tree_tended.png",
-    note: "Tended base check.",
-    staff_name: "Deepak Toppo",
-    created_at: "2026-06-26T15:00:00.000Z"
-  },
-  {
-    id: "log-3-v4",
-    tree_id: 3,
-    type: "visit",
-    note: "Standard morning watering.",
-    staff_name: "Ramesh Kerketta",
-    created_at: "2026-06-27T08:00:00.000Z"
-  },
-
-  // Tree 4: 1 visit, 1 photo
-  {
-    id: "log-4-v1",
-    tree_id: 4,
-    type: "visit",
-    note: "First watering visit logged.",
-    staff_name: "Poonam Minz",
-    created_at: "2026-06-25T08:30:00.000Z"
-  },
-  {
-    id: "log-4-p1",
-    tree_id: 4,
-    type: "photo",
-    photo_url: "/demo/tree_sapling.png",
-    note: "Neem sapling initial capture.",
-    staff_name: "Ramesh Kerketta",
-    created_at: "2026-06-25T11:30:00.000Z"
-  },
-
-  // Tree 5: 2 visits, 2 photos
-  {
-    id: "log-5-v1",
-    tree_id: 5,
-    type: "visit",
-    note: "Base cleared and watered.",
-    staff_name: "Ajay Lakra",
-    created_at: "2026-06-25T08:45:00.000Z"
-  },
-  {
-    id: "log-5-p1",
-    tree_id: 5,
-    type: "photo",
-    photo_url: "/demo/tree_sapling.png",
-    note: "Initial teak sapling photo.",
-    staff_name: "Sunita Tigga",
-    created_at: "2026-06-25T10:15:00.000Z"
-  },
-  {
-    id: "log-5-v2",
-    tree_id: 5,
-    type: "visit",
-    note: "Evening checking and watering.",
-    staff_name: "Deepak Toppo",
-    created_at: "2026-06-25T17:15:00.000Z"
-  },
-  {
-    id: "log-5-p2",
-    tree_id: 5,
-    type: "photo",
-    photo_url: "/demo/tree_growing.png",
-    note: "Tended progress check.",
-    staff_name: "Poonam Minz",
-    created_at: "2026-06-26T11:00:00.000Z"
-  }
-];
-
-export function getTrees(): Tree[] {
-  if (typeof window === 'undefined') return DEFAULT_TREES;
-  const stored = localStorage.getItem('ptr_trees');
+export function getMockTrees(): Tree[] {
+  if (typeof window === 'undefined') return STATIC_TREES;
+  const stored = localStorage.getItem('ptr_mock_trees');
   if (!stored) {
-    localStorage.setItem('ptr_trees', JSON.stringify(DEFAULT_TREES));
-    return DEFAULT_TREES;
+    localStorage.setItem('ptr_mock_trees', JSON.stringify(STATIC_TREES));
+    return STATIC_TREES;
   }
   return JSON.parse(stored);
 }
 
-export function getLogs(): TreeLog[] {
-  if (typeof window === 'undefined') return DEFAULT_LOGS;
-  const stored = localStorage.getItem('ptr_logs');
+export function getMockLogs(): TreeLog[] {
+  if (typeof window === 'undefined') return STATIC_LOGS;
+  const stored = localStorage.getItem('ptr_mock_logs');
   if (!stored) {
-    localStorage.setItem('ptr_logs', JSON.stringify(DEFAULT_LOGS));
-    return DEFAULT_LOGS;
+    localStorage.setItem('ptr_mock_logs', JSON.stringify(STATIC_LOGS));
+    return STATIC_LOGS;
   }
   return JSON.parse(stored);
 }
 
-export function addLog(log: Omit<TreeLog, 'id' | 'created_at'>) {
+export function addMockLog(log: Omit<TreeLog, 'id' | 'created_at'>) {
   if (typeof window === 'undefined') return;
-  const logs = getLogs();
+  const logs = getMockLogs();
   const newLog: TreeLog = {
     ...log,
-    id: `log-${Date.now()}`,
+    id: `mock-log-${Date.now()}`,
     created_at: new Date().toISOString()
   };
   logs.push(newLog);
-  localStorage.setItem('ptr_logs', JSON.stringify(logs));
+  localStorage.setItem('ptr_mock_logs', JSON.stringify(logs));
 }
 
-export function getSession(): { email: string; name: string } | null {
+export function updateMockTreeStatus(treeId: number, status: string) {
+  if (typeof window === 'undefined') return;
+  const trees = getMockTrees();
+  const updated = trees.map(t => t.id === treeId ? { ...t, status } : t);
+  localStorage.setItem('ptr_mock_trees', JSON.stringify(updated));
+}
+
+export function getMockSession(): { email: string; name: string } | null {
   if (typeof window === 'undefined') return null;
-  const stored = localStorage.getItem('ptr_session');
+  const stored = localStorage.getItem('ptr_mock_session');
   return stored ? JSON.parse(stored) : null;
 }
 
-export function signIn() {
+export function signInMock() {
   if (typeof window === 'undefined') return;
   const session = { email: 'demo@ptr.org', name: 'Demo Staff' };
-  localStorage.setItem('ptr_session', JSON.stringify(session));
+  localStorage.setItem('ptr_mock_session', JSON.stringify(session));
+  window.dispatchEvent(new Event('ptr_auth_change'));
 }
 
-export function signOut() {
+export function signOutMock() {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem('ptr_session');
+  localStorage.removeItem('ptr_mock_session');
+  window.dispatchEvent(new Event('ptr_auth_change'));
 }
