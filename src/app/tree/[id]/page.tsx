@@ -74,7 +74,7 @@ export default async function TreePage({ params }: PageProps) {
           </div>
           <h2 className="text-xl font-bold text-foreground">Tree Not Found</h2>
           <p className="text-sm text-muted-foreground mt-2">
-            The scanned QR tag ID #{id} does not exist in the official Palamu Tiger Reserve registry.
+            The scanned QR tag ID #{id} does not exist in the official Palamau Tiger Reserve registry.
           </p>
           <div className="mt-6">
             <Link href="/" className={cn(buttonVariants({ variant: 'default' }), "w-full bg-primary text-white hover:bg-primary/95")}>
@@ -209,7 +209,7 @@ export default async function TreePage({ params }: PageProps) {
             </div>
             <div className="flex justify-between items-center py-1.5 border-b border-border/50">
               <span className="text-muted-foreground">Location</span>
-              <span className="font-semibold text-foreground">Kasturba School, PTR</span>
+              <span className="font-semibold text-foreground">{tree.location || 'Kasturba School, PTR'}</span>
             </div>
 
             {/* GPS Coordinates */}
@@ -312,7 +312,7 @@ export default async function TreePage({ params }: PageProps) {
 
                     <div className="flex flex-wrap justify-between items-center gap-2 mt-2 pt-2 border-t border-border/40">
                       <p className="text-[10px] text-muted-foreground flex items-center gap-1 font-semibold">
-                        <User className="h-3 w-3" /> Logged by {log.staff_name.split('@')[0]}
+                        <User className="h-3 w-3" /> Logged by Forest Guard, PTR
                       </p>
 
                       {/* GPS Verified Badge */}

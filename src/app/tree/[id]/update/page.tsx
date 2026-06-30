@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase, isMockMode } from '@/lib/supabase';
-import { getMockTrees, addMockLog, updateMockTreeStatus, getMockSession, signInMock } from '@/lib/mockData';
+import { getMockTrees, addMockLog, updateMockTreeStatus, getMockSession, signInMock, updateMockTreeDetails } from '@/lib/mockData';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,9 +22,11 @@ import {
   AlertCircle,
   LogIn,
   Info,
-  MapPin
+  MapPin,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { addToQueue, getQueue } from '@/lib/offlineQueue';
 
 const DEMO_EMAIL = "demo@ptr.org";
 const DEMO_PASSWORD = "demo1234";
@@ -41,10 +43,11 @@ export default function UpdateTreePage({ params }: PageProps) {
   const [tree, setTree] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null); // 'visit' | 'photo' | 'login'
+  const [actionLoading, setActionLoading] = useState<string | null>(null); // 'visit' | 'photo' | 'login' | 'edit'
   const [gpsStatus, setGpsStatus] = useState<string | null>(null); // message for GPS capture
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [queueCount, setQueueCount] = useState(0);
 
   // Login form states
   const [loginEmail, setLoginEmail] = useState(DEMO_EMAIL);
@@ -57,38 +60,72 @@ export default function UpdateTreePage({ params }: PageProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // Edit core details form states
+  const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
+  const [editPlanterName, setEditPlanterName] = useState('');
+  const [editSpecies, setEditSpecies] = useState('');
+  const [editPlantedDate, setEditPlantedDate] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
+
+  const checkQueue = async () => {
+    try {
+      const q = await getQueue();
+      // Filter count for this tree specifically
+      const thisTreeQueue = q.filter(item => item.tree_id === treeId);
+      setQueueCount(thisTreeQueue.length);
+    } catch (e) {
+      console.warn('Queue check error in Update page:', e);
+    }
+  };
+
+  const fetchTree = async () => {
+    if (isNaN(treeId)) {
+      setError('Invalid Tree ID');
+      setLoading(false);
+      return;
+    }
+    
+    if (isMockMode) {
+      const allTrees = getMockTrees();
+      const data = allTrees.find(t => t.id === treeId) || null;
+      if (!data) {
+        setError('Tree not found in registry');
+      } else {
+        setTree(data);
+        setStatus(data.status || 'Healthy');
+        setEditPlanterName(data.planter_name || '');
+        setEditSpecies(data.species || '');
+        setEditPlantedDate(data.planted_date || '');
+        setEditLocation(data.location || '');
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('trees')
+        .select('*')
+        .eq('id', treeId)
+        .single();
+      
+      if (error || !data) {
+        setError('Tree not found in registry');
+      } else {
+        setTree(data);
+        setStatus(data.status || 'Healthy');
+        setEditPlanterName(data.planter_name || '');
+        setEditSpecies(data.species || '');
+        setEditPlantedDate(data.planted_date || '');
+        setEditLocation(data.location || '');
+      }
+    }
+  };
+
   useEffect(() => {
     if (isNaN(treeId)) {
       setError('Invalid Tree ID');
       setLoading(false);
       return;
     }
-
-    const fetchTree = async () => {
-      if (isMockMode) {
-        const allTrees = getMockTrees();
-        const data = allTrees.find(t => t.id === treeId) || null;
-        if (!data) {
-          setError('Tree not found in registry');
-        } else {
-          setTree(data);
-          setStatus(data.status || 'Healthy');
-        }
-      } else {
-        const { data, error } = await supabase
-          .from('trees')
-          .select('*')
-          .eq('id', treeId)
-          .single();
-        
-        if (error || !data) {
-          setError('Tree not found in registry');
-        } else {
-          setTree(data);
-          setStatus(data.status || 'Healthy');
-        }
-      }
-    };
 
     if (isMockMode) {
       (async () => {
@@ -117,6 +154,21 @@ export default function UpdateTreePage({ params }: PageProps) {
 
       return () => subscription.unsubscribe();
     }
+  }, [treeId]);
+
+  useEffect(() => {
+    checkQueue();
+    window.addEventListener('ptr_sync_queue_changed', checkQueue);
+    
+    const handleDataSynced = () => {
+      fetchTree();
+    };
+    window.addEventListener('ptr_data_synced', handleDataSynced);
+
+    return () => {
+      window.removeEventListener('ptr_sync_queue_changed', checkQueue);
+      window.removeEventListener('ptr_data_synced', handleDataSynced);
+    };
   }, [treeId]);
 
   // Handle Inline Login
@@ -188,6 +240,25 @@ export default function UpdateTreePage({ params }: PageProps) {
     setSuccess(null);
 
     try {
+      // Offline check
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        await addToQueue({
+          tree_id: tree.id,
+          type: 'visit',
+          status,
+          note: note.trim() || undefined,
+          staff_name: user.email
+        });
+        setSuccess('Saved. Will upload when you have signal.');
+        setNote('');
+        setShowNote(false);
+        setTimeout(() => {
+          router.push(`/tree/${tree.id}`);
+          router.refresh();
+        }, 1500);
+        return;
+      }
+
       if (isMockMode) {
         addMockLog({
           tree_id: tree.id,
@@ -228,7 +299,25 @@ export default function UpdateTreePage({ params }: PageProps) {
         router.refresh();
       }, 1500);
     } catch (err: any) {
-      setError(err.message || 'Failed to submit visit log.');
+      console.warn('Log visit error, falling back to offline queue:', err);
+      try {
+        await addToQueue({
+          tree_id: tree.id,
+          type: 'visit',
+          status,
+          note: note.trim() || undefined,
+          staff_name: user.email
+        });
+        setSuccess('Saved. Will upload when you have signal.');
+        setNote('');
+        setShowNote(false);
+        setTimeout(() => {
+          router.push(`/tree/${tree.id}`);
+          router.refresh();
+        }, 1500);
+      } catch (queueErr) {
+        setError(err.message || 'Failed to submit visit log.');
+      }
     } finally {
       setActionLoading(null);
     }
@@ -242,9 +331,10 @@ export default function UpdateTreePage({ params }: PageProps) {
     setError(null);
     setSuccess(null);
 
+    let coords: { latitude: number | null, longitude: number | null } = { latitude: null, longitude: null };
     try {
       // Step A: Capture GPS coordinates first (non-blocking)
-      const coords = await getGpsCoordinates();
+      coords = await getGpsCoordinates();
 
       // Step B: Load image to canvas and compress it
       const img = new window.Image();
@@ -284,6 +374,30 @@ export default function UpdateTreePage({ params }: PageProps) {
       });
 
       if (!blob) throw new Error('Image compression failed');
+
+      // Offline check
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        await addToQueue({
+          tree_id: tree.id,
+          type: 'photo',
+          status,
+          note: note.trim() || undefined,
+          photoBlob: blob,
+          gpsCoords: { latitude: coords.latitude, longitude: coords.longitude },
+          staff_name: user.email
+        });
+        setSuccess('Saved. Will upload when you have signal.');
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        setNote('');
+        setShowNote(false);
+        setGpsStatus(null);
+        setTimeout(() => {
+          router.push(`/tree/${tree.id}`);
+          router.refresh();
+        }, 1500);
+        return;
+      }
 
       if (isMockMode) {
         // Convert image blob to base64 Data URL so it fits in mock localStorage
@@ -361,8 +475,198 @@ export default function UpdateTreePage({ params }: PageProps) {
         router.refresh();
       }, 1500);
     } catch (err: any) {
-      setError(err.message || 'Failed to submit growth photo.');
-      setGpsStatus(null);
+      console.warn('Upload photo error, falling back to offline queue:', err);
+      try {
+        let fallbackBlob: Blob = selectedFile;
+        // If image compressed successfully, use that instead of original file
+        const blob = await new Promise<Blob | null>((resolve) => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 100;
+          canvas.height = 100;
+          canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.82);
+        });
+        
+        await addToQueue({
+          tree_id: tree.id,
+          type: 'photo',
+          status,
+          note: note.trim() || undefined,
+          photoBlob: fallbackBlob,
+          gpsCoords: { latitude: coords.latitude || null, longitude: coords.longitude || null },
+          staff_name: user.email
+        });
+        setSuccess('Saved. Will upload when you have signal.');
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        setNote('');
+        setShowNote(false);
+        setGpsStatus(null);
+        setTimeout(() => {
+          router.push(`/tree/${tree.id}`);
+          router.refresh();
+        }, 1500);
+      } catch (queueErr) {
+        setError(err.message || 'Failed to submit growth photo.');
+        setGpsStatus(null);
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // 3. Edit Core Tree Details
+  const handleEditDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !tree) return;
+    setActionLoading('edit');
+    setError(null);
+    setSuccess(null);
+
+    let bannerBlob: Blob | null = null;
+    try {
+      if (selectedBannerFile) {
+        // Compress banner image
+        const img = new window.Image();
+        img.src = URL.createObjectURL(selectedBannerFile);
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('Failed to load banner image.'));
+        });
+
+        const canvas = document.createElement('canvas');
+        const max_width = 800;
+        const max_height = 600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > max_width) {
+            height *= max_width / width;
+            width = max_width;
+          }
+        } else {
+          if (height > max_height) {
+            width *= max_height / height;
+            height = max_height;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not get 2D context');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressed = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.82);
+        });
+
+        if (!compressed) throw new Error('Banner compression failed');
+        bannerBlob = compressed;
+      }
+
+      // Offline check
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        await addToQueue({
+          tree_id: tree.id,
+          type: 'edit',
+          status: tree.status || 'Healthy',
+          planter_name: editPlanterName,
+          species: editSpecies,
+          planted_date: editPlantedDate,
+          location: editLocation,
+          photoBlob: bannerBlob || undefined,
+          staff_name: user.email
+        });
+        setSuccess('Saved. Will upload when you have signal.');
+        setSelectedBannerFile(null);
+        setBannerPreviewUrl(null);
+        setTimeout(() => {
+          router.push(`/tree/${tree.id}`);
+          router.refresh();
+        }, 1500);
+        return;
+      }
+
+      // Online logic
+      let bannerPhotoUrl = '';
+      if (bannerBlob) {
+        if (isMockMode) {
+          bannerPhotoUrl = await blobToBase64(bannerBlob);
+        } else {
+          const fileExt = 'jpg';
+          const fileName = `tree-banner-${tree.id}-${Date.now()}.${fileExt}`;
+          const { error: uploadErr } = await supabase.storage
+            .from('tree-photos')
+            .upload(fileName, bannerBlob, {
+              contentType: 'image/jpeg',
+              cacheControl: '3600',
+              upsert: true
+            });
+          if (uploadErr) throw uploadErr;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('tree-photos')
+            .getPublicUrl(fileName);
+          bannerPhotoUrl = publicUrl;
+        }
+      }
+
+      const updateData: any = {
+        planter_name: editPlanterName,
+        species: editSpecies,
+        planted_date: editPlantedDate,
+        location: editLocation
+      };
+      if (bannerPhotoUrl) {
+        updateData.main_photo_url = bannerPhotoUrl;
+      }
+
+      if (isMockMode) {
+        updateMockTreeDetails(tree.id, updateData);
+      } else {
+        const { error: updateErr } = await supabase
+          .from('trees')
+          .update(updateData)
+          .eq('id', tree.id);
+        if (updateErr) throw updateErr;
+      }
+
+      setSuccess('Tree details updated.');
+      setSelectedBannerFile(null);
+      setBannerPreviewUrl(null);
+
+      // Redirect after 1.5s
+      setTimeout(() => {
+        router.push(`/tree/${tree.id}`);
+        router.refresh();
+      }, 1500);
+
+    } catch (err: any) {
+      console.warn('Edit details error, falling back to offline queue:', err);
+      try {
+        let fallbackBlob: Blob | undefined = selectedBannerFile || undefined;
+        await addToQueue({
+          tree_id: tree.id,
+          type: 'edit',
+          status: tree.status || 'Healthy',
+          planter_name: editPlanterName,
+          species: editSpecies,
+          planted_date: editPlantedDate,
+          location: editLocation,
+          photoBlob: fallbackBlob,
+          staff_name: user.email
+        });
+        setSuccess('Saved. Will upload when you have signal.');
+        setSelectedBannerFile(null);
+        setBannerPreviewUrl(null);
+        setTimeout(() => {
+          router.push(`/tree/${tree.id}`);
+          router.refresh();
+        }, 1500);
+      } catch (queueErr) {
+        setError(err.message || 'Failed to update details.');
+      }
     } finally {
       setActionLoading(null);
     }
@@ -376,6 +680,23 @@ export default function UpdateTreePage({ params }: PageProps) {
     }
   };
 
+  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedBannerFile(file);
+      setBannerPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // RENDER LOGIN IF NOT SIGNED IN
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-background min-h-screen">
@@ -385,7 +706,7 @@ export default function UpdateTreePage({ params }: PageProps) {
     );
   }
 
-  // RENDER DEMO LOGIN IF NOT SIGNED IN
+  // RENDER LOGIN IF NOT SIGNED IN
   if (!user) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background px-4 py-16 min-h-screen">
@@ -401,7 +722,7 @@ export default function UpdateTreePage({ params }: PageProps) {
               <div className="relative h-16 w-16 overflow-hidden rounded-full border border-primary/20 bg-white mx-auto mb-2">
                 <Image
                   src="/logo.png"
-                  alt="Palamu Tiger Reserve Logo"
+                  alt="Palamau Tiger Reserve Logo"
                   fill
                   className="object-cover"
                   priority
@@ -424,7 +745,7 @@ export default function UpdateTreePage({ params }: PageProps) {
                 <div className="bg-primary/5 border border-primary/10 text-muted-foreground text-xs p-3 rounded-lg flex gap-2 items-start">
                   <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
                   <p>
-                    Staff demo credentials:<br />
+                    Pre-filled staff credentials:<br />
                     Email: <code className="bg-background px-1 rounded font-semibold text-primary">{DEMO_EMAIL}</code><br />
                     Password: <code className="bg-background px-1 rounded font-semibold text-primary">{DEMO_PASSWORD}</code>
                   </p>
@@ -506,6 +827,18 @@ export default function UpdateTreePage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background pb-20 px-4 py-8">
+      {success && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border border-border p-6 rounded-2xl shadow-xl max-w-sm w-full mx-4 text-center space-y-4 animate-pop-in">
+            <div className="h-16 w-16 bg-emerald-500/10 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">Action Completed</h3>
+            <p className="text-sm text-muted-foreground font-medium">{success}</p>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-md mx-auto space-y-4">
         {/* Back Link */}
         <div className="flex items-center justify-between">
@@ -542,18 +875,19 @@ export default function UpdateTreePage({ params }: PageProps) {
           </div>
         </Card>
 
+        {/* Sync Queue Warning Badge */}
+        {queueCount > 0 && (
+          <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-3.5 flex items-center gap-2 text-amber-700 text-xs font-semibold animate-pulse">
+            <RefreshCw className="h-4.5 w-4.5 animate-spin text-amber-600 shrink-0" />
+            <span>{queueCount} {queueCount === 1 ? 'update' : 'updates'} waiting to sync locally for this tree.</span>
+          </div>
+        )}
+
         {/* Success/Error Alerts */}
         {error && (
           <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs p-3.5 rounded-xl flex gap-2 items-start animate-in fade-in slide-in-from-top-2 duration-200">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-xs p-3.5 rounded-xl flex gap-2 items-start animate-in fade-in slide-in-from-top-2 duration-200">
-            <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600" />
-            <span className="font-medium">{success}</span>
           </div>
         )}
 
@@ -744,6 +1078,148 @@ export default function UpdateTreePage({ params }: PageProps) {
               </Button>
             </CardFooter>
           </form>
+        </Card>
+
+        {/* Collapsible Action C: Edit Tree Details */}
+        <Card className="border-border bg-card shadow-md">
+          <button
+            type="button"
+            onClick={() => setIsEditDetailsOpen(!isEditDetailsOpen)}
+            className="w-full flex items-center justify-between p-4 cursor-pointer hover:bg-muted/10 transition-colors"
+          >
+            <div className="text-left">
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                Edit Tree Details
+              </CardTitle>
+              <CardDescription className="text-[10px] text-muted-foreground mt-0.5">
+                Correct core planter, species, location or banner photo
+              </CardDescription>
+            </div>
+            <span className="text-muted-foreground text-xs font-bold font-sans">
+              {isEditDetailsOpen ? 'Hide' : 'Show'}
+            </span>
+          </button>
+
+          {isEditDetailsOpen && (
+            <form onSubmit={handleEditDetails} className="border-t border-border/60">
+              <CardContent className="p-4 space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="planterName">Planter Name</Label>
+                  <Input
+                    id="planterName"
+                    value={editPlanterName}
+                    onChange={(e) => setEditPlanterName(e.target.value)}
+                    required
+                    disabled={actionLoading !== null}
+                    className="h-10 border-border text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="treeSpecies">Tree Species</Label>
+                  <Input
+                    id="treeSpecies"
+                    value={editSpecies}
+                    onChange={(e) => setEditSpecies(e.target.value)}
+                    required
+                    disabled={actionLoading !== null}
+                    className="h-10 border-border text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="plantedDate">Date Planted</Label>
+                  <Input
+                    id="plantedDate"
+                    type="date"
+                    value={editPlantedDate}
+                    onChange={(e) => setEditPlantedDate(e.target.value)}
+                    required
+                    disabled={actionLoading !== null}
+                    className="h-10 border-border text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="treeLocation">Location</Label>
+                  <Input
+                    id="treeLocation"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    required
+                    disabled={actionLoading !== null}
+                    className="h-10 border-border text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="bannerInput">Replace Banner Photo</Label>
+                  {bannerPreviewUrl ? (
+                    <div className="relative w-full h-44 rounded-xl overflow-hidden border border-border/80 bg-secondary flex justify-center items-center">
+                      <Image
+                        src={bannerPreviewUrl}
+                        alt="Banner Preview"
+                        fill
+                        className="object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedBannerFile(null);
+                          setBannerPreviewUrl(null);
+                        }}
+                        className="absolute bottom-2 right-2 bg-rose-600 hover:bg-rose-500 font-semibold text-xs h-8 text-white"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <label 
+                      htmlFor="bannerInput"
+                      className="flex flex-col items-center justify-center w-full h-32 border border-dashed border-border hover:border-primary/50 rounded-xl cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="flex flex-col items-center justify-center text-center px-4">
+                        <Camera className="w-6 h-6 text-muted-foreground mb-1" />
+                        <p className="text-xs font-semibold text-foreground">
+                          Choose New Banner Photo
+                        </p>
+                      </div>
+                      <input 
+                        id="bannerInput" 
+                        type="file" 
+                        accept="image/*" 
+                        capture="environment"
+                        onChange={handleBannerFileChange}
+                        disabled={actionLoading !== null}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter className="p-4 pt-0">
+                <Button
+                  type="submit"
+                  disabled={actionLoading !== null}
+                  className="w-full h-11 bg-primary hover:bg-primary/95 text-white gap-2 font-semibold text-sm"
+                >
+                  {actionLoading === 'edit' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving Details...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </CardFooter>
+            </form>
+          )}
         </Card>
       </div>
     </div>

@@ -7,6 +7,7 @@ export interface Tree {
   latitude: number;
   longitude: number;
   status: string;
+  location?: string;
 }
 
 export interface TreeLog {
@@ -49,6 +50,20 @@ const JHARKHAND_PLANTERS = [
 
 export const STATIC_TREES: Tree[] = Array.from({ length: 50 }, (_, i) => {
   const id = i + 1;
+  if (id === 1) {
+    return {
+      id: 1,
+      planter_name: 'Shahzada Iqbal',
+      species: 'Jamun',
+      planted_date: '2026-06-05',
+      main_photo_url: 'https://i.postimg.cc/T3Y6RwQh/272c84e3-0d82-45b2-8126-7e4c8687177d.jpg',
+      latitude: 23.85412,
+      longitude: 84.12345,
+      status: 'Healthy',
+      location: 'Qila Grassland'
+    };
+  }
+  
   const species = INDIAN_SPECIES[i % INDIAN_SPECIES.length];
   const planter_name = JHARKHAND_PLANTERS[i % JHARKHAND_PLANTERS.length];
   
@@ -81,44 +96,20 @@ export const STATIC_TREES: Tree[] = Array.from({ length: 50 }, (_, i) => {
     main_photo_url,
     latitude: 23.85412 + (i * 0.003),
     longitude: 84.12345 + (i * 0.003),
-    status
+    status,
+    location: 'Kasturba School, PTR'
   };
 });
 
 export const STATIC_LOGS: TreeLog[] = [
   // Tree 1 Logs
   {
-    id: 'log-1-v1',
-    tree_id: 1,
-    type: 'visit',
-    note: 'Initial base fertilization complete.',
-    staff_name: 'Ramesh Kerketta',
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
     id: 'log-1-p1',
     tree_id: 1,
     type: 'photo',
-    photo_url: '/demo/tree_sapling.png',
-    note: 'Planting day snapshot.',
-    staff_name: 'Sunita Tigga',
-    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'log-1-v2',
-    tree_id: 1,
-    type: 'visit',
-    note: 'Watered in the evening, soil moisture verified.',
-    staff_name: 'Ajay Lakra',
-    created_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'log-1-v3',
-    tree_id: 1,
-    type: 'visit',
-    note: 'Checked trunk health. Clear.',
-    staff_name: 'Poonam Minz',
-    created_at: new Date().toISOString()
+    photo_url: 'https://i.postimg.cc/T3Y6RwQh/272c84e3-0d82-45b2-8126-7e4c8687177d.jpg',
+    staff_name: 'Forest Guard, PTR',
+    created_at: '2026-06-05T12:00:00.000Z'
   },
   // Tree 2 Logs
   {
@@ -184,6 +175,13 @@ export function updateMockTreeStatus(treeId: number, status: string) {
   if (typeof window === 'undefined') return;
   const trees = getMockTrees();
   const updated = trees.map(t => t.id === treeId ? { ...t, status } : t);
+  localStorage.setItem('ptr_mock_trees', JSON.stringify(updated));
+}
+
+export function updateMockTreeDetails(treeId: number, details: Partial<Tree>) {
+  if (typeof window === 'undefined') return;
+  const trees = getMockTrees();
+  const updated = trees.map(t => t.id === treeId ? { ...t, ...details } : t);
   localStorage.setItem('ptr_mock_trees', JSON.stringify(updated));
 }
 

@@ -123,3 +123,33 @@
     @apply font-sans;
   }
 }
+
+@keyframes page-transition {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page {
+  animation: page-transition 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pop-in {
+  0% {
+    transform: scale(0.9) translateY(4px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-pop-in {
+  animation: pop-in 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}

@@ -7,12 +7,44 @@ import { useEffect, useState } from 'react';
 import { supabase, isMockMode } from '@/lib/supabase';
 import { getMockSession, signOutMock } from '@/lib/mockData';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { LogOut, LayoutDashboard, User } from 'lucide-react';
+import { LogOut, LayoutDashboard, User, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getQueue, syncOfflineQueue } from '@/lib/offlineQueue';
 
 export default function Navbar() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [queueCount, setQueueCount] = useState(0);
+
+  const checkQueue = async () => {
+    try {
+      const q = await getQueue();
+      setQueueCount(q.length);
+    } catch (e) {
+      console.warn('checkQueue error in Navbar:', e);
+    }
+  };
+
+  useEffect(() => {
+    checkQueue();
+    
+    const handleOnline = () => {
+      syncOfflineQueue();
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('ptr_sync_queue_changed', checkQueue);
+    
+    // Attempt auto-sync on mount if online
+    if (typeof window !== 'undefined' && navigator.onLine) {
+      syncOfflineQueue();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('ptr_sync_queue_changed', checkQueue);
+    };
+  }, []);
 
   useEffect(() => {
     if (isMockMode) {
@@ -53,12 +85,12 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur-md print:hidden">
       <div className="container mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        {/* The Palamu Tiger Reserve logo is wrapped in a Link as requested */}
+        {/* The Palamau Tiger Reserve logo is wrapped in a Link as requested */}
         <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-90">
           <div className="relative h-10 w-10 overflow-hidden rounded-full border border-primary/20 bg-white">
             <Image
               src="/logo.png"
-              alt="Palamu Tiger Reserve Logo"
+              alt="Palamau Tiger Reserve Logo"
               fill
               className="object-cover"
               priority
@@ -66,7 +98,7 @@ export default function Navbar() {
           </div>
           <div className="flex flex-col">
             <span className="font-sans text-sm font-semibold tracking-wide uppercase text-primary">
-              Palamu Tiger Reserve
+              Palamau Tiger Reserve
             </span>
             <span className="text-[10px] tracking-widest text-muted-foreground uppercase">
               Tree Tracker (PTR)
@@ -77,6 +109,12 @@ export default function Navbar() {
         <nav className="flex items-center gap-2">
           {user ? (
             <>
+              {queueCount > 0 && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full animate-pulse">
+                  <RefreshCw className="h-3 w-3 animate-spin text-amber-500" />
+                  {queueCount} pending
+                </span>
+              )}
               <Link 
                 href="/admin" 
                 className={cn(

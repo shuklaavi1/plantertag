@@ -287,7 +287,7 @@ export default function AdminPage() {
             <div className="relative h-20 w-20 overflow-hidden rounded-full border border-primary/20 bg-white mx-auto shadow-sm">
               <Image
                 src="/logo.png"
-                alt="Palamu Tiger Reserve Logo"
+                alt="Palamau Tiger Reserve Logo"
                 fill
                 className="object-cover"
                 priority
@@ -383,7 +383,7 @@ export default function AdminPage() {
               <Trees className="h-6 w-6 text-primary" /> PTR Forestry Registry
             </h1>
             <p className="text-xs text-muted-foreground">
-              Official tree-tracking console for Palamu Tiger Reserve
+              Official tree-tracking console for Palamau Tiger Reserve
             </p>
           </div>
           

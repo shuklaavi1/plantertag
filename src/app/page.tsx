@@ -7,31 +7,86 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { supabase, isMockMode } from '@/lib/supabase';
+import { getMockTrees } from '@/lib/mockData';
 import { 
   Search, 
   QrCode, 
   ShieldAlert, 
   ArrowRight,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
   const [treeId, setTreeId] = useState('');
   const [searchError, setSearchError] = useState('');
+  const [matchingTrees, setMatchingTrees] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleInputChange = (val: string) => {
+    setTreeId(val);
+    setSearchError('');
+    if (!val.trim()) {
+      setMatchingTrees([]);
+    }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setSearchError('');
+    setMatchingTrees([]);
 
-    const id = parseInt(treeId, 10);
-    const maxTrees = 50;
-    if (isNaN(id) || id < 1 || id > maxTrees) {
-      setSearchError(`Please enter a valid tree ID between 1 and ${maxTrees}.`);
+    const query = treeId.trim();
+    if (!query) {
+      setSearchError('Please enter a Tree ID or Planter\'s Name.');
       return;
     }
 
-    router.push(`/tree/${id}`);
+    if (/^\d+$/.test(query)) {
+      const id = parseInt(query, 10);
+      const maxTrees = 50;
+      if (isNaN(id) || id < 1 || id > maxTrees) {
+        setSearchError(`Please enter a valid tree ID between 1 and ${maxTrees}.`);
+        return;
+      }
+      router.push(`/tree/${id}`);
+      return;
+    }
+
+    // Treat as planter name lookup
+    setIsSearching(true);
+    try {
+      let results: any[] = [];
+      if (isMockMode) {
+        const allTrees = getMockTrees();
+        results = allTrees.filter(t => 
+          t.planter_name.toLowerCase().includes(query.toLowerCase())
+        );
+      } else {
+        const { data, error } = await supabase
+          .from('trees')
+          .select('id, species, planted_date, planter_name')
+          .ilike('planter_name', `%${query}%`);
+        
+        if (error) throw error;
+        results = data || [];
+      }
+
+      if (results.length === 0) {
+        setSearchError("No tree found for that name or ID");
+      } else if (results.length === 1) {
+        router.push(`/tree/${results[0].id}`);
+      } else {
+        setMatchingTrees(results);
+      }
+    } catch (err: any) {
+      setSearchError("Error searching by name. Please try again.");
+      console.error(err);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   return (
@@ -41,7 +96,7 @@ export default function HomePage() {
         <div className="relative h-28 w-28 overflow-hidden rounded-full border border-primary bg-white mx-auto shadow-md">
           <Image
             src="/logo.png"
-            alt="Palamu Tiger Reserve Logo"
+            alt="Palamau Tiger Reserve Logo"
             fill
             className="object-cover"
             priority
@@ -54,7 +109,7 @@ export default function HomePage() {
             Department of Forests & Environment
           </span>
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-foreground">
-            Palamu Tiger Reserve
+            Palamau Tiger Reserve
           </h1>
           <p className="text-base text-muted-foreground max-w-md mx-auto">
             Official QR-based tree growth tracking and tending registry portal.
@@ -71,15 +126,15 @@ export default function HomePage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  type="number"
-                  placeholder="Enter Tree ID (1 - 5)"
+                  type="text"
+                  placeholder="Enter Tree ID or Planter's Name"
                   value={treeId}
-                  onChange={(e) => setTreeId(e.target.value)}
+                  onChange={(e) => handleInputChange(e.target.value)}
                   className="pl-9 h-11 border-border focus-visible:ring-primary font-medium"
                 />
               </div>
-              <Button type="submit" className="bg-primary hover:bg-primary/95 text-white h-11 px-5">
-                Go
+              <Button type="submit" disabled={isSearching} className="bg-primary hover:bg-primary/95 text-white h-11 px-5">
+                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Go'}
               </Button>
             </form>
             {searchError && (
@@ -87,6 +142,36 @@ export default function HomePage() {
                 <ShieldAlert className="h-3.5 w-3.5" />
                 {searchError}
               </p>
+            )}
+
+            {/* Matching Trees List */}
+            {matchingTrees.length > 0 && (
+              <div className="mt-4 text-left border border-border bg-card rounded-xl p-4 space-y-2 max-h-60 overflow-y-auto">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                  Matching Planters ({matchingTrees.length})
+                </p>
+                <div className="space-y-2">
+                  {matchingTrees.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => router.push(`/tree/${t.id}`)}
+                      className="w-full text-left p-2.5 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-all flex justify-between items-center group cursor-pointer"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {t.planter_name}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {t.species.split(' (')[0]} • Planted {new Date(t.planted_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                        #{t.id}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -114,10 +199,27 @@ export default function HomePage() {
         <div className="max-w-md mx-auto bg-primary/5 border border-primary/10 p-4 rounded-xl flex gap-3 text-left text-xs leading-relaxed text-muted-foreground mt-8">
           <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-primary mb-0.5">Forest Monitoring Initiative (Demo Build)</p>
+            <p className="font-semibold text-primary mb-0.5">Forest Monitoring Initiative</p>
             <p>
-              Each tree in the reserve is marked with a metallic tag containing a secure QR code. Scanning the tag instantly displays the tree's planting history, health status, and growth timeline.
+              Each tree in the reserve is marked with a secure QR tag. Scanning it instantly shows the tree's planting history, health status, and growth timeline.
             </p>
+          </div>
+        </div>
+
+        {/* How to Use Section */}
+        <div className="max-w-md mx-auto mt-4 border border-border bg-card rounded-xl p-4 text-left shadow-sm">
+          <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5 mb-2">
+            <Info className="h-4 w-4 text-primary" /> How to Use the Portal
+          </h3>
+          <div className="space-y-2 text-[11px] text-muted-foreground leading-relaxed">
+            <div>
+              <p className="font-semibold text-foreground">For Public Visitors:</p>
+              <p>Scan any tree's QR tag, or enter its Tree ID or planter's name above, to see its growth history.</p>
+            </div>
+            <div className="border-t border-border/50 pt-2 mt-1">
+              <p className="font-semibold text-foreground">For Forest Staff:</p>
+              <p>Log in via Staff Login, then scan a tree's tag and tap 'Staff Update' to log a watering visit, edit details, or upload a growth photo.</p>
+            </div>
           </div>
         </div>
       </div>

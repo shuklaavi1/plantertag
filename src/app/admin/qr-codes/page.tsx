@@ -162,7 +162,7 @@ export default function QrCodesPage() {
             <div className="relative h-20 w-20 overflow-hidden rounded-full border border-primary/20 bg-white mx-auto shadow-sm">
               <Image
                 src="/logo.png"
-                alt="Palamu Tiger Reserve Logo"
+                alt="Palamau Tiger Reserve Logo"
                 fill
                 className="object-cover"
                 priority
@@ -189,7 +189,7 @@ export default function QrCodesPage() {
               <div className="bg-primary/5 border border-primary/10 text-muted-foreground text-xs p-3 rounded-lg flex gap-2 items-start">
                 <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
                 <p>
-                  One-click demo credentials pre-filled. Just click <strong>Sign In</strong> to load the QR tags.
+                  Default staff credentials pre-filled. Just click <strong>Sign In</strong> to load the QR tags.
                 </p>
               </div>
 
@@ -233,7 +233,7 @@ export default function QrCodesPage() {
                 ) : (
                   <>
                     <LogIn className="h-4 w-4" />
-                    Sign In / Access QR Sheet
+                    Sign In
                   </>
                 )}
               </Button>
@@ -298,7 +298,7 @@ export default function QrCodesPage() {
                   </div>
                   <div className="flex flex-col leading-tight">
                     <span className="text-[9px] font-extrabold tracking-wider text-green-800 uppercase">
-                      Palamu Tiger Reserve
+                      Palamau Tiger Reserve
                     </span>
                     <span className="text-[7px] text-gray-500 font-medium tracking-widest uppercase">
                       Government of Jharkhand
