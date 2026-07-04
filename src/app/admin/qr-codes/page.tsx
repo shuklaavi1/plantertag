@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -18,7 +18,8 @@ import {
   AlertCircle,
   Info,
   QrCode,
-  ShieldAlert
+  ShieldAlert,
+  Search
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ interface Tree {
   main_photo_url: string;
   latitude: number;
   longitude: number;
+  location?: string;
 }
 
 export default function QrCodesPage() {
@@ -43,6 +45,36 @@ export default function QrCodesPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Search/filter states & printing state
+  const [qrSearch, setQrSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  // Memoized filter list of trees
+  const filteredTrees = useMemo(() => {
+    return trees.filter((tree) => {
+      if (!qrSearch.trim()) return true;
+      const query = qrSearch.toLowerCase().trim();
+      return (
+        tree.id.toString() === query ||
+        (tree.species || '').toLowerCase().includes(query) ||
+        (tree.planter_name || '').toLowerCase().includes(query)
+      );
+    });
+  }, [trees, qrSearch]);
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [qrSearch]);
+
+  const itemsPerPage = 24;
+  const totalPages = Math.ceil(filteredTrees.length / itemsPerPage);
+
+  const displayedTrees = isPrinting
+    ? filteredTrees
+    : filteredTrees.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Login form pre-filled
   const [loginEmail, setLoginEmail] = useState(DEMO_EMAIL);
@@ -128,7 +160,11 @@ export default function QrCodesPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    setIsPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 800);
   };
 
   // Determine site base URL (from env or window origin fallback)
@@ -254,90 +290,194 @@ export default function QrCodesPage() {
             <QrCode className="h-6 w-6 text-primary" /> Print QR Codes
           </h1>
           <p className="text-sm text-muted-foreground">
-            Printable sheet for all {trees.length} seeded trees. Sized for sticker or metal tag printing.
+            Printable sheet for all {filteredTrees.length} seeded trees. Sized for sticker or metal tag printing.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link 
-            href="/admin" 
-            className={cn(
-              buttonVariants({ variant: 'outline' }),
-              "border-border gap-1.5 h-11 px-4"
-            )}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Admin
-          </Link>
-          <Button onClick={handlePrint} className="bg-primary hover:bg-primary/95 text-white gap-2 h-11 px-5 shadow-md">
-            <Printer className="h-4 w-4" />
-            Print Tags
-          </Button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Quick Search/Filter Box */}
+          <div className="relative w-full sm:w-60">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search ID, species, planter..."
+              value={qrSearch}
+              onChange={(e) => setQrSearch(e.target.value)}
+              className="pl-9 h-11 border-border focus-visible:ring-primary text-sm font-medium"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link 
+              href="/admin" 
+              className={cn(
+                buttonVariants({ variant: 'outline' }),
+                "border-border gap-1.5 h-11 px-4 text-sm font-semibold"
+              )}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Admin
+            </Link>
+            <Button onClick={handlePrint} className="bg-primary hover:bg-primary/95 text-white gap-2 h-11 px-5 shadow-md font-semibold">
+              <Printer className="h-4 w-4" />
+              Print Tags
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Grid of tags */}
       <div className="container mx-auto max-w-5xl">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 justify-items-center print:grid-cols-2 print:gap-4 print:p-0">
-          {trees.map((tree) => {
-            const treeUrl = `${siteUrl}/tree/${tree.id}`;
+        {filteredTrees.length === 0 ? (
+          <div className="text-center py-12 border border-dashed border-border rounded-2xl bg-card">
+            <ShieldAlert className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm font-semibold text-muted-foreground">No tags match the filter criteria.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 justify-items-center print:grid-cols-2 print:gap-4 print:p-0">
+            {displayedTrees.map((tree) => {
+              const treeUrl = `${siteUrl}/tree/${tree.id}`;
 
-            return (
-              <div 
-                key={tree.id} 
-                className="w-[2.5in] h-[3.5in] border-2 border-primary/45 bg-white p-4 flex flex-col justify-between items-center text-black rounded-lg shadow-sm print:shadow-none print:border-black print:rounded-none relative break-inside-avoid page-break-inside-avoid"
-              >
-                {/* Tag Header */}
-                <div className="w-full flex items-center gap-2 border-b border-gray-200 pb-1.5">
-                  <div className="relative h-7 w-7 overflow-hidden rounded-full border border-gray-200 bg-white shrink-0">
-                    <Image
-                      src="/logo.png"
-                      alt="PTR Logo"
-                      fill
-                      className="object-cover"
+              return (
+                <div 
+                  key={tree.id} 
+                  className="w-[2.5in] h-[3.5in] border-2 border-primary/45 bg-white p-4 flex flex-col justify-between items-center text-black rounded-lg shadow-sm print:shadow-none print:border-black print:rounded-none relative break-inside-avoid page-break-inside-avoid"
+                >
+                  {/* Tag Header */}
+                  <div className="w-full flex items-center gap-2 border-b border-gray-200 pb-1.5">
+                    <div className="relative h-7 w-7 overflow-hidden rounded-full border border-gray-200 bg-white shrink-0">
+                      <Image
+                        src="/logo.png"
+                        alt="PTR Logo"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-col leading-tight">
+                      <span className="text-[9px] font-extrabold tracking-wider text-green-800 uppercase">
+                        Palamau Tiger Reserve
+                      </span>
+                      <span className="text-[7px] text-gray-500 font-medium tracking-widest uppercase">
+                        Government of Jharkhand
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* QR Code Section */}
+                  <div className="flex-1 flex flex-col justify-center items-center my-3">
+                    <QRCodeSVG
+                      value={treeUrl}
+                      size={135}
+                      level="H" // High error correction for outdoor scanning
+                      includeMargin={false}
                     />
-                  </div>
-                  <div className="flex flex-col leading-tight">
-                    <span className="text-[9px] font-extrabold tracking-wider text-green-800 uppercase">
-                      Palamau Tiger Reserve
-                    </span>
-                    <span className="text-[7px] text-gray-500 font-medium tracking-widest uppercase">
-                      Government of Jharkhand
+                    <span className="text-[7px] text-gray-400 mt-1 font-mono tracking-widest uppercase">
+                      Scan to view timeline
                     </span>
                   </div>
-                </div>
 
-                {/* QR Code Section */}
-                <div className="flex-1 flex flex-col justify-center items-center my-3">
-                  <QRCodeSVG
-                    value={treeUrl}
-                    size={135}
-                    level="H" // High error correction for outdoor scanning
-                    includeMargin={false}
-                  />
-                  <span className="text-[7px] text-gray-400 mt-1 font-mono tracking-widest uppercase">
-                    Scan to view timeline
-                  </span>
-                </div>
-
-                {/* Tag Footer Details */}
-                <div className="w-full border-t border-gray-200 pt-1.5 flex flex-col leading-tight">
-                  <div className="flex justify-between items-baseline mb-0.5">
-                    <span className="text-[10px] font-bold text-gray-950 truncate max-w-[120px]">
-                      {tree.species.split(' (')[0]}
-                    </span>
-                    <span className="text-[12px] font-black text-green-800 shrink-0 font-mono">
-                      #{tree.id}
+                  {/* Tag Footer Details */}
+                  <div className="w-full border-t border-gray-200 pt-1.5 flex flex-col leading-tight">
+                    <div className="flex justify-between items-baseline mb-0.5">
+                      <span className="text-[10px] font-bold text-gray-950 truncate max-w-[120px]">
+                        {(tree.species || 'To be updated').split(' (')[0]}
+                      </span>
+                      <span className="text-[12px] font-black text-green-800 shrink-0 font-mono">
+                        #{tree.id}
+                      </span>
+                    </div>
+                    <span className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">
+                      Location: {tree.location || 'Kasturba School, PTR'}
                     </span>
                   </div>
-                  <span className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">
-                    Location: Kasturba School, PTR
-                  </span>
                 </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination controls for screen */}
+        {!isPrinting && totalPages > 1 && (
+          <div className="flex items-center justify-between border border-border bg-card px-4 py-3 rounded-xl shadow-sm mt-8 print:hidden">
+            <div className="flex flex-1 justify-between sm:hidden">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="border-border text-xs"
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="border-border text-xs"
+              >
+                Next
+              </Button>
+            </div>
+            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">
+                  Showing <span className="font-semibold text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-semibold text-foreground">{Math.min(currentPage * itemsPerPage, filteredTrees.length)}</span> of{' '}
+                  <span className="font-semibold text-foreground">{filteredTrees.length}</span> tags
+                </p>
               </div>
-            );
-          })}
-        </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 p-0 border-border"
+                >
+                  &lt;&lt;
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 px-3 border-border text-xs"
+                >
+                  Previous
+                </Button>
+                <span className="text-xs font-semibold text-muted-foreground px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="h-8 px-3 border-border text-xs"
+                >
+                  Next
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="h-8 w-8 p-0 border-border"
+                >
+                  &gt;&gt;
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Print preparation overlay */}
+      {isPrinting && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm print:hidden animate-pop-in">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+          <h2 className="text-lg font-bold text-foreground">Preparing Printable Tags...</h2>
+          <p className="text-sm text-muted-foreground">Generating QR codes for {filteredTrees.length} trees</p>
+        </div>
+      )}
     </div>
   );
 }

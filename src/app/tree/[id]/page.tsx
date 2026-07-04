@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import SafeImage from '@/components/SafeImage';
 import { notFound } from 'next/navigation';
 import { supabase, isMockMode } from '@/lib/supabase';
 import { getMockTrees, getMockLogs } from '@/lib/mockData';
@@ -88,6 +88,21 @@ export default async function TreePage({ params }: PageProps) {
 
 
 
+  const isValidDate = (d: any) => {
+    if (!d) return false;
+    const date = new Date(d);
+    return !isNaN(date.getTime());
+  };
+
+  const safeFormat = (d: any, formatStr: string) => {
+    if (!isValidDate(d)) return 'To be updated';
+    try {
+      return format(new Date(d), formatStr);
+    } catch (e) {
+      return 'To be updated';
+    }
+  };
+
   const visitLogs = logs?.filter(log => log.type === 'visit') || [];
   const visitCount = visitLogs.length;
 
@@ -95,14 +110,15 @@ export default async function TreePage({ params }: PageProps) {
   const OVERDUE_DAYS = 7;
   const latestLog = logs && logs.length > 0 ? logs[0] : null;
   let daysSinceLastTended = 0;
+  let isOverdue = false;
   
-  if (latestLog) {
+  if (latestLog && isValidDate(latestLog.created_at)) {
     daysSinceLastTended = differenceInDays(new Date(), new Date(latestLog.created_at));
-  } else {
-    // If no logs, compare with planted_date
+    isOverdue = daysSinceLastTended >= OVERDUE_DAYS;
+  } else if (isValidDate(tree.planted_date)) {
     daysSinceLastTended = differenceInDays(new Date(), new Date(tree.planted_date));
+    isOverdue = daysSinceLastTended >= OVERDUE_DAYS;
   }
-  const isOverdue = daysSinceLastTended >= OVERDUE_DAYS;
 
   // Status Badge Colors
   const statusConfig = {
@@ -113,13 +129,18 @@ export default async function TreePage({ params }: PageProps) {
   const currentStatus = (tree.status as keyof typeof statusConfig) || 'Healthy';
   const statusStyle = statusConfig[currentStatus];
 
+  // Robust field fallbacks for empty / "To be updated" values
+  const speciesName = tree.species || 'To be updated';
+  const displaySpeciesName = speciesName.split(' (')[0];
+  const planterName = tree.planter_name || 'To be updated';
+
   return (
     <div className="min-h-screen bg-background pb-28">
       {/* Cover / Hero Photo */}
       <div className="relative h-64 w-full bg-secondary sm:h-96 md:h-[400px]">
-        <Image
-          src={tree.main_photo_url || "/demo/tree_mature.png"}
-          alt={tree.species}
+        <SafeImage
+          src={tree.main_photo_url}
+          alt={displaySpeciesName}
           fill
           className="object-cover"
           priority
@@ -134,9 +155,9 @@ export default async function TreePage({ params }: PageProps) {
               {statusStyle.label}
             </Badge>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{tree.species}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{speciesName}</h1>
           <p className="text-sm opacity-90 flex items-center gap-1 mt-1 font-medium">
-            <User className="h-3.5 w-3.5" /> Planter: {tree.planter_name}
+            <User className="h-3.5 w-3.5" /> Planter: {planterName}
           </p>
         </div>
       </div>
@@ -175,7 +196,7 @@ export default async function TreePage({ params }: PageProps) {
               </div>
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-foreground">
-                  {format(new Date(tree.planted_date), 'MMM yyyy')}
+                  {safeFormat(tree.planted_date, 'MMM yyyy')}
                 </span>
                 <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
                   Date Planted
@@ -195,16 +216,16 @@ export default async function TreePage({ params }: PageProps) {
           <CardContent className="space-y-3.5 text-sm">
             <div className="flex justify-between items-center py-1.5 border-b border-border/50">
               <span className="text-muted-foreground">Tree Species</span>
-              <span className="font-semibold text-foreground">{tree.species}</span>
+              <span className="font-semibold text-foreground">{speciesName}</span>
             </div>
             <div className="flex justify-between items-center py-1.5 border-b border-border/50">
               <span className="text-muted-foreground">Planter Name</span>
-              <span className="font-semibold text-foreground">{tree.planter_name}</span>
+              <span className="font-semibold text-foreground">{planterName}</span>
             </div>
             <div className="flex justify-between items-center py-1.5 border-b border-border/50">
               <span className="text-muted-foreground">Date Planted</span>
               <span className="font-semibold text-foreground">
-                {format(new Date(tree.planted_date), 'PPP')}
+                {safeFormat(tree.planted_date, 'PPP')}
               </span>
             </div>
             <div className="flex justify-between items-center py-1.5 border-b border-border/50">
@@ -289,13 +310,13 @@ export default async function TreePage({ params }: PageProps) {
                         {log.type === 'photo' ? 'Growth Photo' : 'Watering Visit'}
                       </Badge>
                       <span className="text-[10px] text-muted-foreground font-medium">
-                        {format(new Date(log.created_at), 'dd MMM yyyy')}
+                        {safeFormat(log.created_at, 'dd MMM yyyy')}
                       </span>
                     </div>
 
                     {log.type === 'photo' && log.photo_url && (
                       <div className="relative h-44 w-full rounded-lg overflow-hidden border border-border/50 mb-3 bg-secondary">
-                        <Image
+                        <SafeImage
                           src={log.photo_url}
                           alt="Growth stage"
                           fill
@@ -327,6 +348,16 @@ export default async function TreePage({ params }: PageProps) {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Public Navigation Links */}
+        <div className="mt-8 pt-4 border-t border-border/65 flex justify-between items-center text-xs text-muted-foreground pb-12 print:hidden">
+          <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1 font-semibold">
+            ← Back to Registry
+          </Link>
+          <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1 font-semibold bg-primary/5 hover:bg-primary/10 text-primary px-3 py-1.5 rounded-lg border border-primary/10">
+            🔍 Scan Another Tree
+          </Link>
         </div>
       </div>
 

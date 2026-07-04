@@ -86,6 +86,12 @@ export default function AdminPage() {
   const [showOverdueOnly, setShowOverdueOnly] = useState<boolean>(false);
   const [sortField, setSortField] = useState<'id' | 'species' | 'planter_name' | 'planted_date' | 'total_visits' | 'days_overdue'>('id');
   const [sortAsc, setSortAsc] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 when search or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, showOverdueOnly]);
 
   // Fetch all data
   const fetchData = async () => {
@@ -196,9 +202,9 @@ export default function AdminPage() {
       const latestLog = treeLogs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
       
       let daysSinceLastTended = 0;
-      if (latestLog) {
+      if (latestLog && latestLog.created_at && !isNaN(new Date(latestLog.created_at).getTime())) {
         daysSinceLastTended = differenceInDays(new Date(), new Date(latestLog.created_at));
-      } else {
+      } else if (tree.planted_date && !isNaN(new Date(tree.planted_date).getTime())) {
         daysSinceLastTended = differenceInDays(new Date(), new Date(tree.planted_date));
       }
 
@@ -233,8 +239,8 @@ export default function AdminPage() {
         // Search filter
         const matchesSearch = 
           tree.id.toString().includes(search) ||
-          tree.species.toLowerCase().includes(search.toLowerCase()) ||
-          tree.planter_name.toLowerCase().includes(search.toLowerCase());
+          (tree.species || '').toLowerCase().includes(search.toLowerCase()) ||
+          (tree.planter_name || '').toLowerCase().includes(search.toLowerCase());
 
         // Status filter
         const matchesStatus = statusFilter === 'all' || tree.status === statusFilter;
@@ -249,8 +255,10 @@ export default function AdminPage() {
         let valB: string | number = b[sortField] ?? '';
 
         if (sortField === 'planted_date') {
-          valA = new Date(a.planted_date).getTime();
-          valB = new Date(b.planted_date).getTime();
+          const dateA = new Date(a.planted_date);
+          const dateB = new Date(b.planted_date);
+          valA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+          valB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
         }
 
         if (valA < valB) return sortAsc ? -1 : 1;
@@ -258,6 +266,13 @@ export default function AdminPage() {
         return 0;
       });
   }, [enrichedTrees, search, statusFilter, showOverdueOnly, sortField, sortAsc]);
+
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(filteredTrees.length / itemsPerPage);
+
+  const displayedTrees = useMemo(() => {
+    return filteredTrees.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredTrees, currentPage, itemsPerPage]);
 
   // Quick helper to reverse sorting directions
   const handleSort = (field: typeof sortField) => {
@@ -588,7 +603,7 @@ export default function AdminPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredTrees.map((tree) => {
+                    displayedTrees.map((tree) => {
                       // Survival colors
                       const statusStyles = {
                         'Healthy': 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
@@ -603,16 +618,18 @@ export default function AdminPage() {
                             #{tree.id}
                           </TableCell>
                           <TableCell className="font-semibold text-foreground text-sm">
-                            {tree.species.split(' (')[0]}
+                            {(tree.species || 'To be updated').split(' (')[0]}
                             <span className="hidden md:inline text-xs text-muted-foreground font-medium block">
-                              {tree.species.includes('(') ? '(' + tree.species.split('(')[1] : ''}
+                              {tree.species && tree.species.includes('(') ? '(' + tree.species.split('(')[1] : ''}
                             </span>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground font-medium">
-                            {tree.planter_name}
+                            {tree.planter_name || 'To be updated'}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell text-xs text-muted-foreground font-medium">
-                            {format(new Date(tree.planted_date), 'dd MMM yyyy')}
+                            {tree.planted_date && !isNaN(new Date(tree.planted_date).getTime())
+                              ? format(new Date(tree.planted_date), 'dd MMM yyyy')
+                              : 'To be updated'}
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className={cn("text-[9px] font-extrabold uppercase px-1.5 py-0.5 border", sStyle)}>
@@ -649,6 +666,81 @@ export default function AdminPage() {
               </Table>
             </div>
           </Card>
+
+          {/* Pagination controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border border-border bg-card px-4 py-3 rounded-xl shadow-sm mt-4">
+              <div className="flex flex-1 justify-between sm:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="border-border text-xs"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="border-border text-xs"
+                >
+                  Next
+                </Button>
+              </div>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">
+                    Showing <span className="font-semibold text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-semibold text-foreground">{Math.min(currentPage * itemsPerPage, filteredTrees.length)}</span> of{' '}
+                    <span className="font-semibold text-foreground">{filteredTrees.length}</span> trees
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="h-8 w-8 p-0 border-border"
+                  >
+                    &lt;&lt;
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="h-8 px-3 border-border text-xs"
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs font-semibold text-muted-foreground px-2">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="h-8 px-3 border-border text-xs"
+                  >
+                    Next
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="h-8 w-8 p-0 border-border"
+                  >
+                    &gt;&gt;
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -48,7 +48,7 @@ const JHARKHAND_PLANTERS = [
   'Alok Oraon', 'Kusum Devi', 'Pankaj Munda', 'Champa Kisku', 'Sanjay Hembrom'
 ];
 
-export const STATIC_TREES: Tree[] = Array.from({ length: 50 }, (_, i) => {
+export const STATIC_TREES: Tree[] = Array.from({ length: 150 }, (_, i) => {
   const id = i + 1;
   if (id === 1) {
     return {
@@ -61,6 +61,20 @@ export const STATIC_TREES: Tree[] = Array.from({ length: 50 }, (_, i) => {
       longitude: 84.12345,
       status: 'Healthy',
       location: 'Qila Grassland'
+    };
+  }
+  
+  if (id === 120) {
+    return {
+      id: 120,
+      planter_name: 'To be updated',
+      species: 'To be updated',
+      planted_date: 'To be updated',
+      main_photo_url: '',
+      latitude: 0,
+      longitude: 0,
+      status: 'Healthy',
+      location: 'Kasturba School, PTR'
     };
   }
   

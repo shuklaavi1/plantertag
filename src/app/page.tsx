@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -24,6 +24,29 @@ export default function HomePage() {
   const [searchError, setSearchError] = useState('');
   const [matchingTrees, setMatchingTrees] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [totalTreesCount, setTotalTreesCount] = useState<number | null>(null);
+
+  // Fetch live count of trees in the registry
+  useEffect(() => {
+    const fetchTreeCount = async () => {
+      try {
+        if (isMockMode) {
+          setTotalTreesCount(getMockTrees().length);
+        } else {
+          const { count, error } = await supabase
+            .from('trees')
+            .select('*', { count: 'exact', head: true });
+          
+          if (error) throw error;
+          setTotalTreesCount(count !== null ? count : 150);
+        }
+      } catch (err) {
+        console.error("Failed to fetch tree count:", err);
+        setTotalTreesCount(150); // fallback
+      }
+    };
+    fetchTreeCount();
+  }, []);
 
   const handleInputChange = (val: string) => {
     setTreeId(val);
@@ -46,7 +69,7 @@ export default function HomePage() {
 
     if (/^\d+$/.test(query)) {
       const id = parseInt(query, 10);
-      const maxTrees = 50;
+      const maxTrees = totalTreesCount || 150;
       if (isNaN(id) || id < 1 || id > maxTrees) {
         setSearchError(`Please enter a valid tree ID between 1 and ${maxTrees}.`);
         return;
@@ -114,6 +137,18 @@ export default function HomePage() {
           <p className="text-base text-muted-foreground max-w-md mx-auto">
             Official QR-based tree growth tracking and tending registry portal.
           </p>
+          <div className="pt-1 flex justify-center">
+            {totalTreesCount !== null ? (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20 animate-pop-in">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                {totalTreesCount} trees in the registry
+              </span>
+            ) : (
+              <div className="h-6 flex items-center justify-center">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary/70" />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Search Tree Form */}
