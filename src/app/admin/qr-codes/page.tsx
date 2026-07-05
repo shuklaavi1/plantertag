@@ -342,15 +342,13 @@ export default function QrCodesPage() {
                   className="w-[2.5in] h-[3.5in] border-2 border-primary/45 bg-white p-4 flex flex-col justify-between items-center text-black rounded-lg shadow-sm print:shadow-none print:border-black print:rounded-none relative break-inside-avoid page-break-inside-avoid"
                 >
                   {/* Tag Header */}
+                  {/* Tag Header */}
                   <div className="w-full flex items-center gap-2 border-b border-gray-200 pb-1.5">
-                    <div className="relative h-7 w-7 overflow-hidden rounded-full border border-gray-200 bg-white shrink-0">
-                      <Image
-                        src="/logo.png"
-                        alt="PTR Logo"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
+                    <img
+                      src="/logo.png"
+                      alt="PTR Logo"
+                      className="h-7 w-7 rounded-full border border-gray-200 object-cover shrink-0"
+                    />
                     <div className="flex flex-col leading-tight">
                       <span className="text-[9px] font-extrabold tracking-wider text-green-800 uppercase">
                         Palamau Tiger Reserve
@@ -362,10 +360,10 @@ export default function QrCodesPage() {
                   </div>
 
                   {/* QR Code Section */}
-                  <div className="flex-1 flex flex-col justify-center items-center my-3">
+                  <div className="flex-1 flex flex-col justify-center items-center my-2">
                     <QRCodeSVG
                       value={treeUrl}
-                      size={135}
+                      size={150}
                       level="H" // High error correction for outdoor scanning
                       includeMargin={false}
                     />
@@ -375,17 +373,9 @@ export default function QrCodesPage() {
                   </div>
 
                   {/* Tag Footer Details */}
-                  <div className="w-full border-t border-gray-200 pt-1.5 flex flex-col leading-tight">
-                    <div className="flex justify-between items-baseline mb-0.5">
-                      <span className="text-[10px] font-bold text-gray-950 truncate max-w-[120px]">
-                        {(tree.species || 'To be updated').split(' (')[0]}
-                      </span>
-                      <span className="text-[12px] font-black text-green-800 shrink-0 font-mono">
-                        #{tree.id}
-                      </span>
-                    </div>
-                    <span className="text-[7px] text-gray-500 font-bold uppercase tracking-wider">
-                      Location: {tree.location || 'Kasturba School, PTR'}
+                  <div className="w-full border-t border-gray-200 pt-2 flex justify-center items-center">
+                    <span className="text-xl font-extrabold text-green-800 tracking-wider font-sans uppercase">
+                      Tree #{tree.id}
                     </span>
                   </div>
                 </div>
