@@ -54,33 +54,40 @@ export default function QrCodesPage() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [isGeneratingZip, setIsGeneratingZip] = useState(false);
   const [zipProgress, setZipProgress] = useState(0);
+  const [zipTotal, setZipTotal] = useState(0);
+  const [zipLabel, setZipLabel] = useState('');
 
-  // Client-side helper to download all tree tags as a ZIP archive
-  const downloadAllAsZip = async () => {
+  // Download a specific ID range (inclusive) as a ZIP archive
+  const downloadRangeAsZip = async (rangeStart: number, rangeEnd: number, label: string) => {
+    const rangeTrees = trees.filter((t) => t.id >= rangeStart && t.id <= rangeEnd);
+    if (rangeTrees.length === 0) {
+      alert(`No trees found in range ${rangeStart}–${rangeEnd}.`);
+      return;
+    }
+
     setIsGeneratingZip(true);
     setZipProgress(0);
+    setZipTotal(rangeTrees.length);
+    setZipLabel(label);
 
     try {
       const { toJpeg } = await import('html-to-image');
       const zip = new JSZip();
 
-      // Wait a brief moment to guarantee the ZIP DOM container mounts fully
+      // Wait for the hidden ZIP DOM container to mount
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       let successCount = 0;
-      let failedTrees: number[] = [];
+      const failedTrees: number[] = [];
 
-      for (let i = 0; i < filteredTrees.length; i++) {
-        const tree = filteredTrees[i];
+      for (let i = 0; i < rangeTrees.length; i++) {
+        const tree = rangeTrees[i];
         const cardId = `zip-card-${tree.id}`;
 
         try {
           const node = document.getElementById(cardId);
-          if (!node) {
-            throw new Error(`Element ${cardId} not found in DOM`);
-          }
+          if (!node) throw new Error(`Element ${cardId} not found in DOM`);
 
-          // Generate JPEG with high crisp quality and 3x device pixel ratio
           const dataUrl = await toJpeg(node, {
             quality: 0.95,
             pixelRatio: 3,
@@ -96,20 +103,19 @@ export default function QrCodesPage() {
         }
 
         setZipProgress(i + 1);
-        // Small delay to let React update progress bar and keep browser responsive
         await new Promise((resolve) => setTimeout(resolve, 30));
       }
 
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(zipBlob);
-      link.download = `ptr-tree-tags.zip`;
+      link.download = `ptr-tree-tags-${rangeStart}-${rangeEnd}.zip`;
       link.click();
 
       if (failedTrees.length > 0) {
-        alert(`Zip download complete. ${successCount} tags generated successfully. Failed IDs: ${failedTrees.join(', ')}`);
+        alert(`Done. ${successCount} tags saved. Failed IDs: ${failedTrees.join(', ')}`);
       } else {
-        alert(`Successfully downloaded all ${filteredTrees.length} tree tags as a ZIP archive!`);
+        alert(`✅ All ${successCount} tags (${label}) downloaded successfully!`);
       }
     } catch (err) {
       console.error('ZIP compilation failed:', err);
@@ -117,6 +123,8 @@ export default function QrCodesPage() {
     } finally {
       setIsGeneratingZip(false);
       setZipProgress(0);
+      setZipTotal(0);
+      setZipLabel('');
     }
   };
 
@@ -400,7 +408,7 @@ export default function QrCodesPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link 
               href="/admin" 
               className={cn(
@@ -411,14 +419,33 @@ export default function QrCodesPage() {
               <ArrowLeft className="h-4 w-4" />
               Back to Admin
             </Link>
-            <Button 
-              onClick={downloadAllAsZip} 
+
+            {/* Three ranged ZIP download buttons */}
+            <Button
+              onClick={() => downloadRangeAsZip(1, 50, 'Trees 1–50')}
               disabled={isGeneratingZip}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-11 px-5 shadow-md font-semibold cursor-pointer disabled:opacity-50"
+              className="bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 h-11 px-4 text-xs shadow-md font-semibold cursor-pointer disabled:opacity-50"
             >
-              <Download className="h-4 w-4" />
-              Download All as ZIP
+              <Download className="h-3.5 w-3.5" />
+              ZIP 1–50
             </Button>
+            <Button
+              onClick={() => downloadRangeAsZip(51, 100, 'Trees 51–100')}
+              disabled={isGeneratingZip}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-11 px-4 text-xs shadow-md font-semibold cursor-pointer disabled:opacity-50"
+            >
+              <Download className="h-3.5 w-3.5" />
+              ZIP 51–100
+            </Button>
+            <Button
+              onClick={() => downloadRangeAsZip(101, 150, 'Trees 101–150')}
+              disabled={isGeneratingZip}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white gap-1.5 h-11 px-4 text-xs shadow-md font-semibold cursor-pointer disabled:opacity-50"
+            >
+              <Download className="h-3.5 w-3.5" />
+              ZIP 101–150
+            </Button>
+
             <Button onClick={handlePrint} className="bg-primary hover:bg-primary/95 text-white gap-2 h-11 px-5 shadow-md font-semibold cursor-pointer">
               <Printer className="h-4 w-4" />
               Print Tags
@@ -459,8 +486,8 @@ export default function QrCodesPage() {
                     <Download className="h-3.5 w-3.5" />
                   </Button>
 
-                  {/* Tiny top margin for hole punch clearance */}
-                  <div className="h-3 w-full shrink-0" />
+                  {/* 1mm top gap for hole punch clearance */}
+                  <div className="h-[1mm] w-full shrink-0" />
 
                   {/* Tag Header (Text Left, Logo Right) */}
                   <div className="w-full flex items-center justify-between border-b border-gray-200 pb-1.5 shrink-0">
@@ -586,57 +613,67 @@ export default function QrCodesPage() {
         )}
       </div>
 
-      {/* Hidden ZIP Generation Container (Rendered off-screen temporarily) */}
-      {isGeneratingZip && (
-        <div id="zip-generation-container" className="absolute left-[-9999px] top-[-9999px] flex flex-col gap-4 bg-white p-4">
-          {filteredTrees.map((tree) => {
-            const treeUrl = `${siteUrl}/tree/${tree.id}`;
-            return (
-              <div 
-                id={`zip-card-${tree.id}`}
-                key={tree.id} 
-                className="w-[2.5in] h-[3.5in] border-2 border-primary/45 bg-white p-4 flex flex-col justify-between items-center text-black relative"
-              >
-                <div className="h-[0.25in] w-full shrink-0" />
-                <div className="w-full flex items-center justify-between border-b border-gray-200 pb-1.5 shrink-0">
-                  <div className="flex flex-col leading-tight text-left">
-                    <span className="text-[9px] font-extrabold tracking-wider text-green-800 uppercase">
-                      Palamau Tiger Reserve
-                    </span>
-                    <span className="text-[7px] text-gray-500 font-medium tracking-widest uppercase">
-                      Government of Jharkhand
+      {/* Hidden ZIP Generation Container (off-screen, only mounts during ZIP generation) */}
+      {isGeneratingZip && (() => {
+        // Determine which range is being generated from zipLabel
+        const zipRangeTrees = trees.filter((t) => {
+          if (zipLabel === 'Trees 1–50') return t.id >= 1 && t.id <= 50;
+          if (zipLabel === 'Trees 51–100') return t.id >= 51 && t.id <= 100;
+          if (zipLabel === 'Trees 101–150') return t.id >= 101 && t.id <= 150;
+          return false;
+        });
+        return (
+          <div id="zip-generation-container" className="absolute left-[-9999px] top-[-9999px] flex flex-col gap-4 bg-white p-4">
+            {zipRangeTrees.map((tree) => {
+              const treeUrl = `${siteUrl}/tree/${tree.id}`;
+              return (
+                <div
+                  id={`zip-card-${tree.id}`}
+                  key={tree.id}
+                  className="w-[2.5in] h-[3.5in] border-2 border-primary/45 bg-white px-3 pt-2 pb-3 flex flex-col justify-start items-center text-black relative"
+                >
+                  <div className="h-[1mm] w-full shrink-0" />
+                  <div className="w-full flex items-center justify-between border-b border-gray-200 pb-1.5 shrink-0">
+                    <div className="flex flex-col leading-tight text-left">
+                      <span className="text-[9px] font-extrabold tracking-wider text-green-800 uppercase">
+                        Palamau Tiger Reserve
+                      </span>
+                      <span className="text-[7px] text-gray-500 font-medium tracking-widest uppercase">
+                        Government of Jharkhand
+                      </span>
+                    </div>
+                    <img
+                      src="/logo.png"
+                      alt="PTR Logo"
+                      width="200"
+                      height="200"
+                      className="h-8 w-8 rounded-full border border-gray-200 object-cover shrink-0"
+                      style={{ imageRendering: 'high-quality', msInterpolationMode: 'bicubic' } as any}
+                    />
+                  </div>
+                  <div className="w-full flex flex-col items-center justify-center mt-2 mb-1">
+                    <QRCodeSVG
+                      value={treeUrl}
+                      size={165}
+                      level="H"
+                      includeMargin={false}
+                    />
+                    <span className="text-[7px] text-gray-400 mt-1 font-mono tracking-widest uppercase">
+                      Scan to view timeline
                     </span>
                   </div>
-                  <img
-                    src="/logo.png"
-                    alt="PTR Logo"
-                    width="200"
-                    height="200"
-                    className="h-8 w-8 rounded-full border border-gray-200 object-cover shrink-0"
-                    style={{ imageRendering: 'high-quality', msInterpolationMode: 'bicubic' } as any}
-                  />
+                  <div className="flex-1" />
+                  <div className="w-full border-t border-gray-200 pt-1.5 flex justify-center items-center">
+                    <span className="text-xl font-extrabold text-green-800 tracking-wider font-sans uppercase">
+                      Tree #{tree.id}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex-1 flex flex-col justify-center items-center my-2">
-                  <QRCodeSVG
-                    value={treeUrl}
-                    size={185}
-                    level="H"
-                    includeMargin={false}
-                  />
-                  <span className="text-[7px] text-gray-400 mt-1 font-mono tracking-widest uppercase">
-                    Scan to view timeline
-                  </span>
-                </div>
-                <div className="w-full border-t border-gray-200 pt-2 flex justify-center items-center">
-                  <span className="text-xl font-extrabold text-green-800 tracking-wider font-sans uppercase">
-                    Tree #{tree.id}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Print preparation overlay */}
       {isPrinting && (
@@ -649,16 +686,16 @@ export default function QrCodesPage() {
 
       {/* ZIP progress overlay */}
       {isGeneratingZip && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm print:hidden animate-pop-in">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm print:hidden">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <h2 className="text-lg font-bold text-foreground">Generating ZIP Archive...</h2>
+          <h2 className="text-lg font-bold text-foreground">Generating ZIP — {zipLabel}</h2>
           <p className="text-sm text-muted-foreground">
-            Processing tree {zipProgress} of {filteredTrees.length}
+            Processing {zipProgress} of {zipTotal} tags...
           </p>
           <div className="w-64 bg-secondary h-2 rounded-full mt-4 overflow-hidden border border-border">
-            <div 
+            <div
               className="bg-primary h-full transition-all duration-300"
-              style={{ width: `${(zipProgress / filteredTrees.length) * 100}%` }}
+              style={{ width: zipTotal > 0 ? `${(zipProgress / zipTotal) * 100}%` : '0%' }}
             />
           </div>
         </div>
