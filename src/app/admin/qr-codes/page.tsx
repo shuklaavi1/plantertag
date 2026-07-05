@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import JSZip from 'jszip';
 import { supabase, isMockMode } from '@/lib/supabase';
 import { getMockTrees, getMockSession, signInMock } from '@/lib/mockData';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -51,6 +52,73 @@ export default function QrCodesPage() {
   const [qrSearch, setQrSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isGeneratingZip, setIsGeneratingZip] = useState(false);
+  const [zipProgress, setZipProgress] = useState(0);
+
+  // Client-side helper to download all tree tags as a ZIP archive
+  const downloadAllAsZip = async () => {
+    setIsGeneratingZip(true);
+    setZipProgress(0);
+
+    try {
+      const { toJpeg } = await import('html-to-image');
+      const zip = new JSZip();
+
+      // Wait a brief moment to guarantee the ZIP DOM container mounts fully
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      let successCount = 0;
+      let failedTrees: number[] = [];
+
+      for (let i = 0; i < filteredTrees.length; i++) {
+        const tree = filteredTrees[i];
+        const cardId = `zip-card-${tree.id}`;
+
+        try {
+          const node = document.getElementById(cardId);
+          if (!node) {
+            throw new Error(`Element ${cardId} not found in DOM`);
+          }
+
+          // Generate JPEG with high crisp quality and 3x device pixel ratio
+          const dataUrl = await toJpeg(node, {
+            quality: 0.95,
+            pixelRatio: 3,
+            backgroundColor: '#ffffff',
+          });
+
+          const base64Data = dataUrl.split(',')[1];
+          zip.file(`tree-${tree.id}.jpg`, base64Data, { base64: true });
+          successCount++;
+        } catch (err) {
+          console.error(`Failed to export tree ${tree.id} to ZIP:`, err);
+          failedTrees.push(tree.id);
+        }
+
+        setZipProgress(i + 1);
+        // Small delay to let React update progress bar and keep browser responsive
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = `ptr-tree-tags.zip`;
+      link.click();
+
+      if (failedTrees.length > 0) {
+        alert(`Zip download complete. ${successCount} tags generated successfully. Failed IDs: ${failedTrees.join(', ')}`);
+      } else {
+        alert(`Successfully downloaded all ${filteredTrees.length} tree tags as a ZIP archive!`);
+      }
+    } catch (err) {
+      console.error('ZIP compilation failed:', err);
+      alert('Failed to compile ZIP archive. Please try again.');
+    } finally {
+      setIsGeneratingZip(false);
+      setZipProgress(0);
+    }
+  };
 
   // Client-side helper to download single tag as JPEG
   const downloadTagAsJpeg = async (treeId: number, cardId: string) => {
@@ -343,7 +411,15 @@ export default function QrCodesPage() {
               <ArrowLeft className="h-4 w-4" />
               Back to Admin
             </Link>
-            <Button onClick={handlePrint} className="bg-primary hover:bg-primary/95 text-white gap-2 h-11 px-5 shadow-md font-semibold">
+            <Button 
+              onClick={downloadAllAsZip} 
+              disabled={isGeneratingZip}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-11 px-5 shadow-md font-semibold cursor-pointer disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              Download All as ZIP
+            </Button>
+            <Button onClick={handlePrint} className="bg-primary hover:bg-primary/95 text-white gap-2 h-11 px-5 shadow-md font-semibold cursor-pointer">
               <Printer className="h-4 w-4" />
               Print Tags
             </Button>
@@ -367,7 +443,7 @@ export default function QrCodesPage() {
                 <div 
                   id={`tree-card-${tree.id}`}
                   key={tree.id} 
-                  className="w-[2.5in] h-[3.5in] border-2 border-primary/45 bg-white p-4 flex flex-col justify-between items-center text-black rounded-lg shadow-sm print:shadow-none print:border-black print:rounded-none relative break-inside-avoid page-break-inside-avoid"
+                  className="w-[2.5in] h-[3.5in] border-2 border-primary/45 bg-white px-3 pt-2 pb-3 flex flex-col justify-start items-center text-black rounded-lg shadow-sm print:shadow-none print:border-black print:rounded-none relative break-inside-avoid page-break-inside-avoid"
                 >
                   {/* Download Button (Screen Only, Excluded from JPEG and Print) */}
                   <Button
@@ -377,16 +453,16 @@ export default function QrCodesPage() {
                       e.stopPropagation();
                       downloadTagAsJpeg(tree.id, `tree-card-${tree.id}`);
                     }}
-                    className="absolute top-2 left-2 h-7 w-7 p-0 rounded-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 print:hidden download-btn-exclude cursor-pointer z-10 transition-colors"
+                    className="absolute top-1.5 left-1.5 h-6 w-6 p-0 rounded-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 print:hidden download-btn-exclude cursor-pointer z-10 transition-colors"
                     title="Download JPEG"
                   >
-                    <Download className="h-4 w-4" />
+                    <Download className="h-3.5 w-3.5" />
                   </Button>
 
-                  {/* Blank Top Margin for Hole Punch (15-20% of 3.5in height = ~0.6in) */}
-                  <div className="h-[0.6in] w-full shrink-0" />
+                  {/* Tiny top margin for hole punch clearance */}
+                  <div className="h-3 w-full shrink-0" />
 
-                  {/* Tag Header (Text Left, Logo Right next to top-right/hole area) */}
+                  {/* Tag Header (Text Left, Logo Right) */}
                   <div className="w-full flex items-center justify-between border-b border-gray-200 pb-1.5 shrink-0">
                     <div className="flex flex-col leading-tight text-left">
                       <span className="text-[9px] font-extrabold tracking-wider text-green-800 uppercase">
@@ -406,12 +482,12 @@ export default function QrCodesPage() {
                     />
                   </div>
 
-                  {/* QR Code Section */}
-                  <div className="flex-1 flex flex-col justify-center items-center my-2">
+                  {/* QR Code Section - fills remaining space, QR maximized */}
+                  <div className="w-full flex flex-col items-center justify-center mt-2 mb-1">
                     <QRCodeSVG
                       value={treeUrl}
-                      size={150}
-                      level="H" // High error correction for outdoor scanning
+                      size={165}
+                      level="H"
                       includeMargin={false}
                     />
                     <span className="text-[7px] text-gray-400 mt-1 font-mono tracking-widest uppercase">
@@ -419,8 +495,11 @@ export default function QrCodesPage() {
                     </span>
                   </div>
 
-                  {/* Tag Footer Details */}
-                  <div className="w-full border-t border-gray-200 pt-2 flex justify-center items-center">
+                  {/* Spacer to push footer down */}
+                  <div className="flex-1" />
+
+                  {/* Tag Footer */}
+                  <div className="w-full border-t border-gray-200 pt-1.5 flex justify-center items-center">
                     <span className="text-xl font-extrabold text-green-800 tracking-wider font-sans uppercase">
                       Tree #{tree.id}
                     </span>
@@ -507,12 +586,81 @@ export default function QrCodesPage() {
         )}
       </div>
 
+      {/* Hidden ZIP Generation Container (Rendered off-screen temporarily) */}
+      {isGeneratingZip && (
+        <div id="zip-generation-container" className="absolute left-[-9999px] top-[-9999px] flex flex-col gap-4 bg-white p-4">
+          {filteredTrees.map((tree) => {
+            const treeUrl = `${siteUrl}/tree/${tree.id}`;
+            return (
+              <div 
+                id={`zip-card-${tree.id}`}
+                key={tree.id} 
+                className="w-[2.5in] h-[3.5in] border-2 border-primary/45 bg-white p-4 flex flex-col justify-between items-center text-black relative"
+              >
+                <div className="h-[0.25in] w-full shrink-0" />
+                <div className="w-full flex items-center justify-between border-b border-gray-200 pb-1.5 shrink-0">
+                  <div className="flex flex-col leading-tight text-left">
+                    <span className="text-[9px] font-extrabold tracking-wider text-green-800 uppercase">
+                      Palamau Tiger Reserve
+                    </span>
+                    <span className="text-[7px] text-gray-500 font-medium tracking-widest uppercase">
+                      Government of Jharkhand
+                    </span>
+                  </div>
+                  <img
+                    src="/logo.png"
+                    alt="PTR Logo"
+                    width="200"
+                    height="200"
+                    className="h-8 w-8 rounded-full border border-gray-200 object-cover shrink-0"
+                    style={{ imageRendering: 'high-quality', msInterpolationMode: 'bicubic' } as any}
+                  />
+                </div>
+                <div className="flex-1 flex flex-col justify-center items-center my-2">
+                  <QRCodeSVG
+                    value={treeUrl}
+                    size={185}
+                    level="H"
+                    includeMargin={false}
+                  />
+                  <span className="text-[7px] text-gray-400 mt-1 font-mono tracking-widest uppercase">
+                    Scan to view timeline
+                  </span>
+                </div>
+                <div className="w-full border-t border-gray-200 pt-2 flex justify-center items-center">
+                  <span className="text-xl font-extrabold text-green-800 tracking-wider font-sans uppercase">
+                    Tree #{tree.id}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Print preparation overlay */}
       {isPrinting && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm print:hidden animate-pop-in">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
           <h2 className="text-lg font-bold text-foreground">Preparing Printable Tags...</h2>
           <p className="text-sm text-muted-foreground">Generating QR codes for {filteredTrees.length} trees</p>
+        </div>
+      )}
+
+      {/* ZIP progress overlay */}
+      {isGeneratingZip && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm print:hidden animate-pop-in">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+          <h2 className="text-lg font-bold text-foreground">Generating ZIP Archive...</h2>
+          <p className="text-sm text-muted-foreground">
+            Processing tree {zipProgress} of {filteredTrees.length}
+          </p>
+          <div className="w-64 bg-secondary h-2 rounded-full mt-4 overflow-hidden border border-border">
+            <div 
+              className="bg-primary h-full transition-all duration-300"
+              style={{ width: `${(zipProgress / filteredTrees.length) * 100}%` }}
+            />
+          </div>
         </div>
       )}
     </div>
