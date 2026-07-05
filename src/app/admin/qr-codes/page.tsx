@@ -19,7 +19,8 @@ import {
   Info,
   QrCode,
   ShieldAlert,
-  Search
+  Search,
+  Download
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,32 @@ export default function QrCodesPage() {
   const [qrSearch, setQrSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isPrinting, setIsPrinting] = useState(false);
+
+  // Client-side helper to download single tag as JPEG
+  const downloadTagAsJpeg = async (treeId: number, cardId: string) => {
+    try {
+      const { toJpeg } = await import('html-to-image');
+      const node = document.getElementById(cardId);
+      if (!node) return;
+
+      const dataUrl = await toJpeg(node, {
+        quality: 0.98,
+        pixelRatio: 3, // 3x resolution for high-quality standalone sharing
+        backgroundColor: '#ffffff',
+        filter: (element: any) => {
+          // Exclude download buttons from rendering in the image
+          return !element.classList?.contains('download-btn-exclude');
+        }
+      });
+
+      const link = document.createElement('a');
+      link.download = `tree-tag-${treeId}.jpeg`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Failed to download tag image:', err);
+    }
+  };
 
   // Memoized filter list of trees
   const filteredTrees = useMemo(() => {
@@ -338,18 +365,30 @@ export default function QrCodesPage() {
 
               return (
                 <div 
+                  id={`tree-card-${tree.id}`}
                   key={tree.id} 
                   className="w-[2.5in] h-[3.5in] border-2 border-primary/45 bg-white p-4 flex flex-col justify-between items-center text-black rounded-lg shadow-sm print:shadow-none print:border-black print:rounded-none relative break-inside-avoid page-break-inside-avoid"
                 >
-                  {/* Tag Header */}
-                  {/* Tag Header */}
-                  <div className="w-full flex items-center gap-2 border-b border-gray-200 pb-1.5">
-                    <img
-                      src="/logo.png"
-                      alt="PTR Logo"
-                      className="h-7 w-7 rounded-full border border-gray-200 object-cover shrink-0"
-                    />
-                    <div className="flex flex-col leading-tight">
+                  {/* Download Button (Screen Only, Excluded from JPEG and Print) */}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadTagAsJpeg(tree.id, `tree-card-${tree.id}`);
+                    }}
+                    className="absolute top-2 left-2 h-7 w-7 p-0 rounded-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 print:hidden download-btn-exclude cursor-pointer z-10 transition-colors"
+                    title="Download JPEG"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+
+                  {/* Blank Top Margin for Hole Punch (15-20% of 3.5in height = ~0.6in) */}
+                  <div className="h-[0.6in] w-full shrink-0" />
+
+                  {/* Tag Header (Text Left, Logo Right next to top-right/hole area) */}
+                  <div className="w-full flex items-center justify-between border-b border-gray-200 pb-1.5 shrink-0">
+                    <div className="flex flex-col leading-tight text-left">
                       <span className="text-[9px] font-extrabold tracking-wider text-green-800 uppercase">
                         Palamau Tiger Reserve
                       </span>
@@ -357,6 +396,14 @@ export default function QrCodesPage() {
                         Government of Jharkhand
                       </span>
                     </div>
+                    <img
+                      src="/logo.png"
+                      alt="PTR Logo"
+                      width="200"
+                      height="200"
+                      className="h-8 w-8 rounded-full border border-gray-200 object-cover shrink-0"
+                      style={{ imageRendering: 'high-quality', msInterpolationMode: 'bicubic' } as any}
+                    />
                   </div>
 
                   {/* QR Code Section */}
