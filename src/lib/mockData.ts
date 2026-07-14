@@ -108,10 +108,10 @@ export const STATIC_TREES: Tree[] = Array.from({ length: 150 }, (_, i) => {
     species,
     planted_date,
     main_photo_url,
-    latitude: 23.85412 + (i * 0.003),
-    longitude: 84.12345 + (i * 0.003),
+    latitude: 23.85412 + (i * 0.0003),
+    longitude: 84.12345 + (i * 0.0003),
     status,
-    location: 'Kasturba School, PTR'
+    location: i % 2 === 0 ? 'Qila Grassland' : 'Alhra'
   };
 });
 
@@ -205,9 +205,10 @@ export function getMockSession(): { email: string; name: string } | null {
   return stored ? JSON.parse(stored) : null;
 }
 
-export function signInMock() {
+export function signInMock(email: string = 'guard@ptr.org') {
   if (typeof window === 'undefined') return;
-  const session = { email: 'demo@ptr.org', name: 'Demo Staff' };
+  const name = email.split('@')[0] || 'Forest Guard';
+  const session = { email, name };
   localStorage.setItem('ptr_mock_session', JSON.stringify(session));
   window.dispatchEvent(new Event('ptr_auth_change'));
 }
@@ -216,4 +217,18 @@ export function signOutMock() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('ptr_mock_session');
   window.dispatchEvent(new Event('ptr_auth_change'));
+}
+
+export function getMockGuardAssignments(email: string): string[] {
+  if (email === 'guard1@ptr.org') {
+    return ['Qila Grassland'];
+  }
+  if (email === 'guard2@ptr.org') {
+    return ['Alhra'];
+  }
+  // If email contains 'guard', default to both to facilitate developer testing
+  if (email.includes('guard')) {
+    return ['Qila Grassland', 'Alhra'];
+  }
+  return []; // Admin or other staff (unrestricted)
 }

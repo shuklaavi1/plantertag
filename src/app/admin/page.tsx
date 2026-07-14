@@ -42,8 +42,6 @@ import {
 import { format, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-const DEMO_EMAIL = "demo@ptr.org";
-const DEMO_PASSWORD = "demo1234";
 const OVERDUE_DAYS = 7;
 
 interface Tree {
@@ -77,8 +75,8 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Login form pre-filled
-  const [loginEmail, setLoginEmail] = useState(DEMO_EMAIL);
-  const [loginPassword, setLoginPassword] = useState(DEMO_PASSWORD);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Table filtering and sorting states
   const [search, setSearch] = useState('');
@@ -157,13 +155,9 @@ export default function AdminPage() {
     setError(null);
 
     if (isMockMode) {
-      if (loginEmail === DEMO_EMAIL && loginPassword === DEMO_PASSWORD) {
-        signInMock();
-        setUser({ email: DEMO_EMAIL, name: 'Demo Staff' });
-        fetchData();
-      } else {
-        setError('Invalid credentials.');
-      }
+      signInMock(loginEmail);
+      setUser({ email: loginEmail, name: loginEmail.split('@')[0] || 'Forest Guard' });
+      fetchData();
       setActionLoading(null);
     } else {
       const { data, error: loginErr } = await supabase.auth.signInWithPassword({
@@ -326,13 +320,6 @@ export default function AdminPage() {
                 </div>
               )}
 
-              <div className="bg-primary/5 border border-primary/10 text-muted-foreground text-xs p-3 rounded-lg flex gap-2 items-start">
-                <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-                <p>
-                  Use pre-authorized credentials:<br />
-                  <code className="bg-background px-1 rounded font-semibold text-primary">{DEMO_EMAIL}</code> / <code className="bg-background px-1 rounded font-semibold text-primary">{DEMO_PASSWORD}</code>
-                </p>
-              </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email Address</Label>

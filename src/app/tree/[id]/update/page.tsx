@@ -28,8 +28,6 @@ import {
 import { cn } from '@/lib/utils';
 import { addToQueue, getQueue } from '@/lib/offlineQueue';
 
-const DEMO_EMAIL = "demo@ptr.org";
-const DEMO_PASSWORD = "demo1234";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -50,8 +48,8 @@ export default function UpdateTreePage({ params }: PageProps) {
   const [queueCount, setQueueCount] = useState(0);
 
   // Login form states
-  const [loginEmail, setLoginEmail] = useState(DEMO_EMAIL);
-  const [loginPassword, setLoginPassword] = useState(DEMO_PASSWORD);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Form states
   const [status, setStatus] = useState<string>('Healthy');
@@ -178,14 +176,10 @@ export default function UpdateTreePage({ params }: PageProps) {
     setError(null);
 
     if (isMockMode) {
-      if (loginEmail === DEMO_EMAIL && loginPassword === DEMO_PASSWORD) {
-        signInMock();
-        setUser({ email: DEMO_EMAIL, name: 'Demo Staff' });
-        setSuccess('Logged in successfully!');
-        setTimeout(() => setSuccess(null), 1200);
-      } else {
-        setError('Invalid email or password.');
-      }
+      signInMock(loginEmail);
+      setUser({ email: loginEmail, name: loginEmail.split('@')[0] || 'Forest Guard' });
+      setSuccess('Logged in successfully!');
+      setTimeout(() => setSuccess(null), 1200);
       setActionLoading(null);
     } else {
       const { data, error: loginErr } = await supabase.auth.signInWithPassword({
@@ -523,7 +517,11 @@ export default function UpdateTreePage({ params }: PageProps) {
     setSuccess(null);
 
     let bannerBlob: Blob | null = null;
+    let coords: { latitude: number | null, longitude: number | null } = { latitude: null, longitude: null };
     try {
+      // Capture device coordinates automatically
+      coords = await getGpsCoordinates();
+      
       if (selectedBannerFile) {
         // Compress banner image
         const img = new window.Image();
@@ -576,9 +574,10 @@ export default function UpdateTreePage({ params }: PageProps) {
           planted_date: editPlantedDate,
           location: editLocation,
           photoBlob: bannerBlob || undefined,
-          staff_name: user.email
+          staff_name: user.email,
+          gpsCoords: coords.latitude !== null ? coords : undefined
         });
-        setSuccess('Saved. Will upload when you have signal.');
+        setSuccess('Saved details. Will upload when you have signal.');
         setSelectedBannerFile(null);
         setBannerPreviewUrl(null);
         setTimeout(() => {
@@ -621,6 +620,10 @@ export default function UpdateTreePage({ params }: PageProps) {
       if (bannerPhotoUrl) {
         updateData.main_photo_url = bannerPhotoUrl;
       }
+      if (coords.latitude !== null) {
+        updateData.latitude = coords.latitude;
+        updateData.longitude = coords.longitude;
+      }
 
       if (isMockMode) {
         updateMockTreeDetails(tree.id, updateData);
@@ -655,9 +658,10 @@ export default function UpdateTreePage({ params }: PageProps) {
           planted_date: editPlantedDate,
           location: editLocation,
           photoBlob: fallbackBlob,
-          staff_name: user.email
+          staff_name: user.email,
+          gpsCoords: coords.latitude !== null ? coords : undefined
         });
-        setSuccess('Saved. Will upload when you have signal.');
+        setSuccess('Saved details. Will upload when you have signal.');
         setSelectedBannerFile(null);
         setBannerPreviewUrl(null);
         setTimeout(() => {
@@ -742,14 +746,6 @@ export default function UpdateTreePage({ params }: PageProps) {
                   </div>
                 )}
 
-                <div className="bg-primary/5 border border-primary/10 text-muted-foreground text-xs p-3 rounded-lg flex gap-2 items-start">
-                  <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-                  <p>
-                    Pre-filled staff credentials:<br />
-                    Email: <code className="bg-background px-1 rounded font-semibold text-primary">{DEMO_EMAIL}</code><br />
-                    Password: <code className="bg-background px-1 rounded font-semibold text-primary">{DEMO_PASSWORD}</code>
-                  </p>
-                </div>
 
                 <div className="space-y-1">
                   <Label htmlFor="email">Email Address</Label>

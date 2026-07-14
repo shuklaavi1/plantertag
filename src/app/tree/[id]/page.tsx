@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import SafeImage from '@/components/SafeImage';
 import { notFound } from 'next/navigation';
+import CertificateDownloadButton from '@/components/CertificateDownloadButton';
 import { supabase, isMockMode } from '@/lib/supabase';
 import { getMockTrees, getMockLogs } from '@/lib/mockData';
 import { Badge } from '@/components/ui/badge';
@@ -205,6 +206,9 @@ export default async function TreePage({ params }: PageProps) {
             </CardContent>
           </Card>
         </div>
+
+        {/* Planter Certificate Download Button */}
+        <CertificateDownloadButton tree={tree} />
 
         {/* Tree Details Card */}
         <Card className="shadow-sm border-border bg-card mb-6">

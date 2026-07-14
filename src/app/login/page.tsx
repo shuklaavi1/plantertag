@@ -11,15 +11,12 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { ShieldAlert, LogIn, Loader2, Info } from 'lucide-react';
 
-const DEMO_EMAIL = "demo@ptr.org";
-const DEMO_PASSWORD = "demo1234";
-
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [email, setEmail] = useState(DEMO_EMAIL);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,14 +29,9 @@ function LoginForm() {
     setError(null);
 
     if (isMockMode) {
-      if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
-        signInMock();
-        router.push(redirectTo);
-        router.refresh();
-      } else {
-        setError('Invalid email or password.');
-        setLoading(false);
-      }
+      signInMock(email);
+      router.push(redirectTo);
+      router.refresh();
     } else {
       const { data, error: loginErr } = await supabase.auth.signInWithPassword({
         email,
@@ -86,14 +78,6 @@ function LoginForm() {
               </div>
             )}
   
-            {/* Alert box reminding about staff credentials */}
-            <div className="bg-primary/5 border border-primary/10 text-muted-foreground text-xs p-3 rounded-lg flex gap-2 items-start">
-              <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-              <p>
-                Fields are pre-filled with default staff credentials 
-                (<code className="bg-background px-1 rounded font-semibold text-primary">{DEMO_EMAIL}</code>).
-              </p>
-            </div>
   
             <div className="space-y-1.5">
               <Label htmlFor="email">Email Address</Label>
