@@ -146,11 +146,12 @@ export default function Navbar() {
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-sans text-sm font-semibold tracking-wide uppercase text-primary">
-                Palamau Tiger Reserve
+              <span className="font-sans font-semibold tracking-wide uppercase text-primary text-[10px] sm:text-xs">
+                <span className="sm:hidden">PTR</span>
+                <span className="hidden sm:inline">Palamau Tiger Reserve</span>
               </span>
-              <span className="text-[10px] tracking-widest text-muted-foreground uppercase">
-                Tree Tracker (PTR)
+              <span className="text-[9px] tracking-widest text-muted-foreground uppercase hidden sm:block">
+                Tree Tracker
               </span>
             </div>
           </Link>
@@ -167,7 +168,7 @@ export default function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border bg-card hover:bg-muted/10 transition-all font-semibold text-sm cursor-pointer shadow-sm focus:outline-none"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-md border border-border bg-card hover:bg-muted/10 transition-all font-semibold text-sm cursor-pointer shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 <Menu className="h-4 w-4 text-primary" />
                 <span>Menu</span>
@@ -177,7 +178,7 @@ export default function Navbar() {
               </button>
 
               {isMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-card p-2.5 shadow-xl animate-in fade-in slide-in-from-top-2 duration-150 z-50">
+                <div className="absolute right-0 mt-2 w-56 rounded-md border border-border bg-card p-2.5 shadow-lg animate-in fade-in slide-in-from-top-2 duration-150 z-50">
                   {user && (
                     <div className="px-2.5 py-1.5 border-b border-border/50 mb-1.5">
                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Logged In As</p>
@@ -191,7 +192,7 @@ export default function Navbar() {
                           <Link
                             href="/my-trees"
                             onClick={() => setIsMenuOpen(false)}
-                            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
+                            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
                           >
                             <Trees className="h-4 w-4 text-primary" />
                             My Trees
@@ -200,7 +201,7 @@ export default function Navbar() {
                         <Link
                           href="/admin"
                           onClick={() => setIsMenuOpen(false)}
-                          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
+                          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
                         >
                           <LayoutDashboard className="h-4 w-4 text-primary" />
                           Admin Dashboard
@@ -211,7 +212,7 @@ export default function Navbar() {
                         <Link
                           href="/login"
                           onClick={() => setIsMenuOpen(false)}
-                          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
+                          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
                         >
                           <User className="h-4 w-4 text-primary" />
                           Staff Login
@@ -219,7 +220,7 @@ export default function Navbar() {
                         <Link
                           href="/admin"
                           onClick={() => setIsMenuOpen(false)}
-                          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
+                          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
                         >
                           <LayoutDashboard className="h-4 w-4 text-primary" />
                           Admin Dashboard
@@ -230,7 +231,7 @@ export default function Navbar() {
                     <Link
                       href="/map"
                       onClick={() => setIsMenuOpen(false)}
-                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
                     >
                       <Map className="h-4 w-4 text-primary" />
                       Interactive Map
@@ -241,7 +242,7 @@ export default function Navbar() {
                         setIsMenuOpen(false);
                         setIsHowToUseOpen(true);
                       }}
-                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-left text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium cursor-pointer"
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-left text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium cursor-pointer"
                     >
                       <HelpCircle className="h-4 w-4 text-primary" />
                       How to Use
@@ -253,7 +254,7 @@ export default function Navbar() {
                           setIsMenuOpen(false);
                           handleLogout();
                         }}
-                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-left text-rose-600 hover:bg-rose-500/10 transition-colors font-medium cursor-pointer border-t border-border/40 pt-2 mt-1"
+                        className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-left text-rose-600 hover:bg-rose-500/10 transition-colors font-medium cursor-pointer border-t border-border/40 pt-2 mt-1"
                       >
                         <LogOut className="h-4 w-4" />
                         Logout
@@ -270,7 +271,7 @@ export default function Navbar() {
       {/* Global How to Use Modal */}
       {isHowToUseOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-center items-center p-4 print:hidden">
-          <div className="bg-card border border-border rounded-2xl max-w-md w-full shadow-2xl p-6 text-left relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-card border border-border rounded-lg max-w-md w-full shadow-xl p-6 text-left relative animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setIsHowToUseOpen(false)}
               className="absolute top-4 right-4 text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none p-1 rounded-lg hover:bg-muted/30"
@@ -308,7 +309,7 @@ export default function Navbar() {
             <div className="mt-6 flex justify-end">
               <Button
                 onClick={() => setIsHowToUseOpen(false)}
-                className="bg-primary hover:bg-primary/95 text-white font-semibold text-xs px-5 py-2 rounded-xl"
+                className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs px-5 py-2 rounded-md focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 Got It
               </Button>

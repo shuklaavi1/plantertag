@@ -29,7 +29,7 @@ export default function CertificateDownloadButton({ tree }: CertificateDownloadB
           </div>
           <Button
             onClick={() => setIsOpen(true)}
-            className="w-full sm:w-auto bg-primary hover:bg-primary/95 text-white font-semibold text-xs h-10 px-4 rounded-xl gap-1.5 shrink-0 cursor-pointer focus:outline-none"
+            className="w-full sm:w-auto bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs h-10 px-4 rounded-md gap-1.5 shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             <Award className="h-4.5 w-4.5" />
             Download Certificate

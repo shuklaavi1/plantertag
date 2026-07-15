@@ -49,7 +49,7 @@ function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-sm border-border shadow-lg bg-card">
+    <Card className="w-full max-w-sm border-border shadow-md bg-card">
       <CardHeader className="text-center space-y-2 pb-4">
         <div className="relative h-20 w-20 overflow-hidden rounded-full border border-primary/20 bg-white mx-auto shadow-sm">
             <Image
@@ -61,7 +61,7 @@ function LoginForm() {
             />
           </div>
           <div>
-            <CardTitle className="text-xl font-bold tracking-tight text-primary uppercase">
+            <CardTitle className="text-xl font-heading font-semibold tracking-tight text-primary uppercase">
               Staff Portal
             </CardTitle>
             <CardDescription className="text-xs text-muted-foreground">
@@ -89,7 +89,7 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 border-border focus-visible:ring-primary font-medium"
+                className="h-11 border-border focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md font-medium"
               />
             </div>
   
@@ -103,7 +103,7 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 border-border focus-visible:ring-primary font-medium"
+                className="h-11 border-border focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md font-medium"
               />
             </div>
           </CardContent>
@@ -111,7 +111,7 @@ function LoginForm() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-11 bg-primary hover:bg-primary/95 text-white gap-2 font-medium"
+              className="w-full h-11 bg-primary hover:bg-primary/95 text-primary-foreground rounded-md focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 gap-2 font-medium"
             >
               {loading ? (
                 <>

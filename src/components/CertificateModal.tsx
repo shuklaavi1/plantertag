@@ -104,7 +104,7 @@ export default function CertificateModal({ isOpen, onClose, tree }: CertificateM
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-center items-center p-4 print:hidden overflow-y-auto">
-      <div className="bg-card border border-border rounded-2xl max-w-3xl w-full shadow-2xl p-6 text-left relative my-8 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-card border border-border rounded-lg max-w-3xl w-full shadow-xl p-6 text-left relative my-8 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header bar */}
         <div className="flex justify-between items-center border-b border-border pb-3 mb-6">
@@ -121,7 +121,7 @@ export default function CertificateModal({ isOpen, onClose, tree }: CertificateM
         </div>
 
         {/* Certificate Display Area (Responsive scrollable container for preview) */}
-        <div className="overflow-x-auto border border-border/80 rounded-xl bg-muted/20 p-4 mb-6 flex justify-center">
+        <div className="overflow-x-auto border border-border/80 rounded-md bg-muted/20 p-4 mb-6 flex justify-center">
           <div className="min-w-[640px] max-w-[700px] w-full aspect-[1.414] bg-white text-emerald-950 p-8 flex flex-col justify-between border-[12px] border-emerald-900 rounded-lg relative shadow-md">
             
             {/* Elegant Border Inset */}
@@ -217,7 +217,7 @@ export default function CertificateModal({ isOpen, onClose, tree }: CertificateM
             variant="outline"
             disabled={isGenerating !== null}
             onClick={handleDownloadPNG}
-            className="w-full sm:w-auto h-11 border-border font-semibold text-sm gap-2 rounded-xl"
+            className="w-full sm:w-auto h-11 border-border font-semibold text-sm gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             {isGenerating === 'png' ? (
               <>
@@ -235,7 +235,7 @@ export default function CertificateModal({ isOpen, onClose, tree }: CertificateM
           <Button
             disabled={isGenerating !== null}
             onClick={handleDownloadPDF}
-            className="w-full sm:w-auto h-11 bg-primary hover:bg-primary/95 text-white font-semibold text-sm gap-2 rounded-xl"
+            className="w-full sm:w-auto h-11 bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-sm gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             {isGenerating === 'pdf' ? (
               <>

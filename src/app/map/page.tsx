@@ -46,7 +46,7 @@ export default function MapPage() {
           <Map className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-xl font-extrabold text-foreground uppercase tracking-wider flex items-center gap-2">
+          <h1 className="text-xl font-heading font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
             Interactive Reserve Map
           </h1>
           <p className="text-xs text-muted-foreground">Geographic distribution of tagged trees in Palamau Tiger Reserve</p>
@@ -66,13 +66,13 @@ export default function MapPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
           {/* Map display */}
-          <div className="lg:col-span-3 h-[500px] md:h-[600px] rounded-2xl overflow-hidden border border-border shadow-md">
+          <div className="lg:col-span-3 h-[500px] md:h-[600px] rounded-md overflow-hidden border border-border shadow-md">
             <LeafletMap trees={trees} />
           </div>
 
           {/* Sidebar Panel */}
           <div className="space-y-6">
-            <Card className="border-border shadow-sm bg-card rounded-2xl">
+            <Card className="border-border shadow-sm bg-card rounded-md">
               <CardHeader className="pb-3">
                 <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <Compass className="h-4.5 w-4.5 text-primary" /> Map Legend
@@ -104,7 +104,7 @@ export default function MapPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-border shadow-sm bg-card rounded-2xl">
+            <Card className="border-border shadow-sm bg-card rounded-md">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <TreePine className="h-4.5 w-4.5 text-primary" /> GPS Metrics

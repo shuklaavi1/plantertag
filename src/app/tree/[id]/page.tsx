@@ -156,7 +156,7 @@ export default async function TreePage({ params }: PageProps) {
               {statusStyle.label}
             </Badge>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{speciesName}</h1>
+          <h1 className="text-2xl font-heading font-semibold tracking-tight sm:text-3xl">{speciesName}</h1>
           <p className="text-sm opacity-90 flex items-center gap-1 mt-1 font-medium">
             <User className="h-3.5 w-3.5" /> Planter: {planterName}
           </p>
@@ -167,7 +167,7 @@ export default async function TreePage({ params }: PageProps) {
         
         {/* Overdue Warning Notification (Subtle text for public-facing page) */}
         {isOverdue && (
-          <div className="mb-4 bg-amber-500/5 border border-amber-500/10 rounded-xl p-3.5 text-center">
+          <div className="mb-4 bg-amber-500/5 border border-amber-500/10 rounded-md p-3.5 text-center">
             <p className="text-xs text-amber-700 font-medium">
               ⚠️ Last tended {daysSinceLastTended} days ago
             </p>
@@ -282,7 +282,7 @@ export default async function TreePage({ params }: PageProps) {
 
         {/* Growth timeline */}
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" /> Growth History Timeline
           </h2>
 
@@ -304,7 +304,7 @@ export default async function TreePage({ params }: PageProps) {
                   </span>
 
                   {/* Log Content */}
-                  <div className="bg-card border border-border p-4 rounded-xl shadow-sm">
+                  <div className="bg-card border border-border p-4 rounded-md shadow-sm">
                     <div className="flex justify-between items-start gap-2 mb-2">
                       <Badge variant="outline" className={`text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 ${
                         log.type === 'photo' 
@@ -359,7 +359,7 @@ export default async function TreePage({ params }: PageProps) {
           <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1 font-semibold">
             ← Back to Registry
           </Link>
-          <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1 font-semibold bg-primary/5 hover:bg-primary/10 text-primary px-3 py-1.5 rounded-lg border border-primary/10">
+          <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1 font-semibold bg-primary/5 hover:bg-primary/10 text-primary px-3 py-1.5 rounded-md border border-primary/10">
             🔍 Scan Another Tree
           </Link>
         </div>
@@ -371,7 +371,7 @@ export default async function TreePage({ params }: PageProps) {
           href={`/tree/${tree.id}/update`}
           className={cn(
             buttonVariants({ variant: 'default' }),
-            "w-full max-w-md h-12 text-sm font-semibold rounded-xl shadow-md gap-2 bg-primary text-white hover:bg-primary/95 flex justify-center items-center"
+            "w-full max-w-md h-12 text-sm font-semibold rounded-md shadow-sm gap-2 bg-primary text-primary-foreground hover:bg-primary/95 flex justify-center items-center focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           )}
         >
           Staff Update

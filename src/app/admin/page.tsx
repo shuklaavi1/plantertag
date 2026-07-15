@@ -291,7 +291,7 @@ export default function AdminPage() {
   if (!user) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background px-4 py-16 min-h-screen">
-        <Card className="w-full max-w-sm border-border shadow-lg bg-card">
+        <Card className="w-full max-w-sm border-border shadow-md bg-card">
           <CardHeader className="text-center space-y-2 pb-4">
             <div className="relative h-20 w-20 overflow-hidden rounded-full border border-primary/20 bg-white mx-auto shadow-sm">
               <Image
@@ -303,7 +303,7 @@ export default function AdminPage() {
               />
             </div>
             <div>
-              <CardTitle className="text-xl font-bold tracking-tight text-primary uppercase">
+              <CardTitle className="text-xl font-heading font-semibold tracking-tight text-primary uppercase">
                 Admin Portal
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
@@ -331,7 +331,7 @@ export default function AdminPage() {
                   onChange={(e) => setLoginEmail(e.target.value)}
                   required
                   disabled={actionLoading === 'login'}
-                  className="h-11 border-border focus-visible:ring-primary font-medium"
+                  className="h-11 border-border focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md font-medium"
                 />
               </div>
 
@@ -345,7 +345,7 @@ export default function AdminPage() {
                   onChange={(e) => setLoginPassword(e.target.value)}
                   required
                   disabled={actionLoading === 'login'}
-                  className="h-11 border-border focus-visible:ring-primary font-medium"
+                  className="h-11 border-border focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md font-medium"
                 />
               </div>
             </CardContent>
@@ -353,7 +353,7 @@ export default function AdminPage() {
               <Button
                 type="submit"
                 disabled={actionLoading === 'login'}
-                className="w-full h-11 bg-primary hover:bg-primary/95 text-white gap-2 font-semibold"
+                className="w-full h-11 bg-primary hover:bg-primary/95 text-primary-foreground rounded-md focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 gap-2 font-semibold"
               >
                 {actionLoading === 'login' ? (
                   <>
@@ -381,7 +381,7 @@ export default function AdminPage() {
         {/* Header Block */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border pb-6">
           <div className="space-y-1">
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
+            <h1 className="text-2xl font-heading font-semibold tracking-tight text-foreground flex items-center gap-2">
               <Trees className="h-6 w-6 text-primary" /> PTR Forestry Registry
             </h1>
             <p className="text-xs text-muted-foreground">
@@ -467,7 +467,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tree Health Conditions Breakdown Strip */}
-        <div className="grid grid-cols-3 gap-4 border border-border/80 bg-muted/20 rounded-xl p-4">
+        <div className="grid grid-cols-3 gap-4 border border-border/80 bg-muted/20 rounded-md p-4">
           <div className="flex items-center gap-2 justify-center border-r border-border/80 last:border-none">
             <Heart className="h-4 w-4 text-emerald-600 shrink-0 fill-current" />
             <div className="flex flex-col text-center sm:text-left">
@@ -502,7 +502,7 @@ export default function AdminPage() {
                   placeholder="Search species, planter name, ID..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-10 border-border focus-visible:ring-primary text-sm font-medium"
+                  className="pl-9 h-10 border-border focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md text-sm font-medium"
                 />
               </div>
 
@@ -526,7 +526,7 @@ export default function AdminPage() {
             <div className="flex items-center gap-2 shrink-0">
               <label 
                 className={cn(
-                  "inline-flex items-center gap-2 cursor-pointer border px-3 py-2 rounded-lg text-xs font-bold transition-all",
+                  "inline-flex items-center gap-2 cursor-pointer border px-3 py-2 rounded-md text-xs font-bold transition-all",
                   showOverdueOnly 
                     ? "border-rose-500 bg-rose-500/10 text-rose-600" 
                     : "border-border bg-card text-muted-foreground hover:bg-secondary"
@@ -656,7 +656,7 @@ export default function AdminPage() {
 
           {/* Pagination controls */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border border-border bg-card px-4 py-3 rounded-xl shadow-sm mt-4">
+            <div className="flex items-center justify-between border border-border bg-card px-4 py-3 rounded-md shadow-sm mt-4">
               <div className="flex flex-1 justify-between sm:hidden">
                 <Button
                   variant="outline"

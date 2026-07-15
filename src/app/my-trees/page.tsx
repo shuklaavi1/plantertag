@@ -188,7 +188,7 @@ export default function MyTreesPage() {
             <Trees className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold text-foreground uppercase tracking-wider flex items-center gap-2">
+            <h1 className="text-xl font-heading font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
               My Trees Dashboard
             </h1>
             <p className="text-xs text-muted-foreground">Personal patrol updates for Palamau Forest Guards</p>
@@ -250,15 +250,15 @@ export default function MyTreesPage() {
 
             {/* Micro Stats */}
             <div className="grid grid-cols-3 gap-3 md:col-span-2">
-              <div className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
+              <div className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-md flex flex-col items-center justify-center text-center shadow-sm">
                 <span className="text-2xl font-bold text-emerald-600">{upToDateTrees}</span>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase mt-1 tracking-wider">Up to Date</span>
               </div>
-              <div className="bg-amber-500/5 border border-amber-500/10 p-4 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
+              <div className="bg-amber-500/5 border border-amber-500/10 p-4 rounded-md flex flex-col items-center justify-center text-center shadow-sm">
                 <span className="text-2xl font-bold text-amber-600">{dueSoonTrees}</span>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase mt-1 tracking-wider">Due Soon</span>
               </div>
-              <div className="bg-rose-500/5 border border-rose-500/10 p-4 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
+              <div className="bg-rose-500/5 border border-rose-500/10 p-4 rounded-md flex flex-col items-center justify-center text-center shadow-sm">
                 <span className="text-2xl font-bold text-rose-600">{overdueTrees}</span>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase mt-1 tracking-wider">Overdue</span>
               </div>
@@ -266,7 +266,7 @@ export default function MyTreesPage() {
           </div>
 
           {/* Interactive Map Block */}
-          <div className="h-[280px] md:h-[350px] rounded-2xl overflow-hidden border border-border shadow-sm">
+          <div className="h-[280px] md:h-[350px] rounded-md overflow-hidden border border-border shadow-sm">
             <LeafletMap trees={trees} />
           </div>
 
@@ -299,7 +299,7 @@ export default function MyTreesPage() {
                     <button
                       key={t.id}
                       onClick={() => router.push(`/tree/${t.id}/update`)}
-                      className="w-full text-left bg-card border border-border rounded-2xl p-4 flex justify-between items-center hover:border-primary/50 hover:shadow-md transition-all group cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full text-left bg-card border border-border rounded-md p-4 flex justify-between items-center hover:border-primary/50 hover:shadow-md transition-all group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     >
                       <div className="space-y-1.5 flex-1 min-w-0 pr-2">
                         <div className="flex items-center gap-2">
