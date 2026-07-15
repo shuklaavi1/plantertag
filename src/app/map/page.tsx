@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isMockMode } from '@/lib/supabase';
 import { getMockTrees } from '@/lib/mockData';
+import { useRouter } from 'next/navigation';
 import LeafletMap from '@/components/LeafletMap';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Map, Loader2, Compass, TreePine, MapPin } from 'lucide-react';
@@ -11,10 +12,26 @@ export default function MapPage() {
   const [trees, setTrees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchTrees = async () => {
       try {
+        let currentUser = null;
+        if (isMockMode) {
+          currentUser = getMockTrees().length > 0 ? { email: 'staff@example.com' } : null; // just simple check
+          // Wait, better mock check
+          const { getMockSession } = await import('@/lib/mockData');
+          currentUser = getMockSession();
+        } else {
+          const { data: { session } } = await supabase.auth.getSession();
+          currentUser = session?.user;
+        }
+
+        if (!currentUser) {
+          router.push('/login');
+          return;
+        }
         if (isMockMode) {
           setTrees(getMockTrees());
         } else {

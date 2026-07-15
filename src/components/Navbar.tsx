@@ -206,6 +206,14 @@ export default function Navbar() {
                           <LayoutDashboard className="h-4 w-4 text-primary" />
                           Admin Dashboard
                         </Link>
+                        <Link
+                          href="/map"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
+                        >
+                          <Map className="h-4 w-4 text-primary" />
+                          Interactive Map
+                        </Link>
                       </>
                     ) : (
                       <>
@@ -228,14 +236,7 @@ export default function Navbar() {
                       </>
                     )}
                     
-                    <Link
-                      href="/map"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground hover:bg-primary/5 hover:text-primary transition-colors font-medium"
-                    >
-                      <Map className="h-4 w-4 text-primary" />
-                      Interactive Map
-                    </Link>
+
 
                     <button
                       onClick={() => {

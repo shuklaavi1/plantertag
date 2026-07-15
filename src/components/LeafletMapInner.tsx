@@ -41,10 +41,26 @@ export default function LeafletMapInner({ trees, center = [23.85412, 84.12345], 
     });
     mapRef.current = map;
 
-    // Load OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const standard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+    });
+    
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri'
+    });
+    
+    const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenTopoMap'
+    });
+
+    const baseMaps = {
+      "Standard": standard,
+      "Satellite": satellite,
+      "Terrain": terrain
+    };
+
+    standard.addTo(map);
+    L.control.layers(baseMaps).addTo(map);
 
     // Add markers for trees
     mapTrees.forEach(tree => {
