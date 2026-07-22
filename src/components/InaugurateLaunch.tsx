@@ -75,14 +75,10 @@ export default function InaugurateLaunch() {
       <div className="flex justify-center my-4">
         <button
           onClick={startInauguration}
-          className="group relative flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-700 to-green-700 text-white font-semibold text-xs rounded-md shadow-md hover:from-emerald-800 hover:to-green-800 transition-all duration-300 transform hover:scale-[1.03] cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          className="flex items-center gap-1.5 px-4 py-2 border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-semibold text-[11px] rounded-md transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 uppercase tracking-wider font-sans"
         >
-          <Sparkles className="h-4 w-4 animate-pulse text-amber-300" />
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
           <span>Inaugurate Website</span>
-          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-          </span>
         </button>
       </div>
 
