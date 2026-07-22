@@ -136,7 +136,7 @@ export default function InaugurateLaunch() {
                   System Launch Sequence Active
                 </span>
                 <h3 className="text-xl font-heading font-semibold text-neutral-100">
-                  Inaugurating Forestry Registry
+                  Inaugurating PTR Tree Tracker OS
                 </h3>
                 <p className="text-xs text-neutral-400 font-sans max-w-[280px]">
                   Setting up zone configurations, encryption keys, and active GPS telemetry.
@@ -158,7 +158,7 @@ export default function InaugurateLaunch() {
                   Registry is Live!
                 </h2>
                 <p className="text-xs text-neutral-300 font-sans max-w-sm">
-                  Palamau Tiger Reserve Forestry Tracking Platform has been successfully inaugurated and deployed to public servers.
+                  Palamau Tiger Reserve Tree Tracker OS has been successfully inaugurated and deployed to public servers.
                 </p>
               </div>
 
